@@ -192,7 +192,7 @@ export default function RequestDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#059669" />
       </SafeAreaView>
     )
   }
@@ -262,7 +262,7 @@ export default function RequestDetailScreen() {
               <View className="gap-2">
                 {!showNotes && (
                   <TouchableOpacity onPress={() => setShowNotes(true)} className="py-2">
-                    <Text className="text-indigo-500 text-sm text-center">+ Add a note</Text>
+                    <Text className="text-emerald-600 text-sm text-center">+ Add a note</Text>
                   </TouchableOpacity>
                 )}
                 <View className="flex-row gap-2">
@@ -289,7 +289,7 @@ export default function RequestDetailScreen() {
               <View className="gap-2">
                 {!showNotes && (
                   <TouchableOpacity onPress={() => setShowNotes(true)} className="py-2">
-                    <Text className="text-indigo-500 text-sm text-center">+ Add a note</Text>
+                    <Text className="text-emerald-600 text-sm text-center">+ Add a note</Text>
                   </TouchableOpacity>
                 )}
                 <View className="flex-row gap-2">

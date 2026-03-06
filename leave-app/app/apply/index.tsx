@@ -93,7 +93,7 @@ export default function ApplyStep1() {
   }
 
   if (loading) {
-    return <SafeAreaView className="flex-1 bg-white items-center justify-center"><ActivityIndicator color="#6366F1" /></SafeAreaView>
+    return <SafeAreaView className="flex-1 bg-white items-center justify-center"><ActivityIndicator color="#059669" /></SafeAreaView>
   }
 
   return (
@@ -132,7 +132,9 @@ export default function ApplyStep1() {
                     <Text className="text-gray-900 font-medium">{lt.name}</Text>
                     {lt.description ? <Text className="text-gray-400 text-xs">{lt.description}</Text> : null}
                   </View>
-                  {!lt.requires_replacement && (
+                  {lt.requires_replacement ? (
+                    <Text className="text-xs text-yellow-700 bg-yellow-50 px-2 py-0.5 rounded-full">Replacement required</Text>
+                  ) : (
                     <Text className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">No replacement needed</Text>
                   )}
                 </TouchableOpacity>
@@ -181,8 +183,8 @@ export default function ApplyStep1() {
 
         {/* Working days */}
         {state.totalDays > 0 && (
-          <View className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 mb-5">
-            <Text className="text-indigo-700 font-medium text-sm">
+          <View className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 mb-5">
+            <Text className="text-emerald-800 font-medium text-sm">
               {state.totalDays} working day{state.totalDays !== 1 ? 's' : ''} (weekends & holidays excluded)
             </Text>
           </View>
@@ -203,7 +205,7 @@ export default function ApplyStep1() {
         </View>
 
         <TouchableOpacity
-          className="bg-indigo-500 rounded-xl py-4 items-center"
+          className="bg-emerald-600 rounded-xl py-4 items-center"
           onPress={handleNext}
         >
           <Text className="text-white font-semibold text-base">
@@ -222,7 +224,7 @@ export default function ApplyStep1() {
                   {pickerTarget === 'startDate' ? 'Start Date' : 'End Date'}
                 </Text>
                 <TouchableOpacity onPress={closeiOSPicker}>
-                  <Text className="text-indigo-600 font-semibold text-base">Done</Text>
+                  <Text className="text-emerald-700 font-semibold text-base">Done</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker

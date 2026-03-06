@@ -107,7 +107,7 @@ export default function ApplyStep2Replacement() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#6366F1" />
+          <ActivityIndicator color="#059669" />
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-8">
@@ -141,7 +141,7 @@ export default function ApplyStep2Replacement() {
             const selected = state.replacementId === c.id
             return (
               <TouchableOpacity
-                className={`bg-white rounded-2xl px-4 py-4 border flex-row items-center ${selected ? 'border-indigo-500' : 'border-gray-100'}`}
+                className={`bg-white rounded-2xl px-4 py-4 border flex-row items-center ${selected ? 'border-emerald-600' : 'border-gray-100'}`}
                 onPress={() => select(c)}
               >
                 <View className="flex-1">
@@ -149,7 +149,7 @@ export default function ApplyStep2Replacement() {
                   {c.jawatan ? <Text className="text-gray-500 text-sm">{c.jawatan}</Text> : null}
                 </View>
                 {selected && (
-                  <View className="w-6 h-6 bg-indigo-500 rounded-full items-center justify-center">
+                  <View className="w-6 h-6 bg-emerald-600 rounded-full items-center justify-center">
                     <Check size={14} color="white" />
                   </View>
                 )}

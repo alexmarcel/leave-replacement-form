@@ -29,7 +29,7 @@ export default function LoginScreen() {
         <View className="flex-1 justify-center px-6 py-12">
           {/* Header */}
           <View className="mb-10">
-            <View className="w-14 h-14 rounded-2xl bg-indigo-500 items-center justify-center mb-4">
+            <View className="w-14 h-14 rounded-2xl bg-emerald-600 items-center justify-center mb-4">
               <Text className="text-white text-2xl font-bold">L</Text>
             </View>
             <Text className="text-3xl font-bold text-gray-900">Welcome back</Text>
@@ -70,7 +70,7 @@ export default function LoginScreen() {
             ) : null}
 
             <TouchableOpacity
-              className="bg-indigo-500 rounded-xl py-3.5 items-center mt-2"
+              className="bg-emerald-600 rounded-xl py-3.5 items-center mt-2"
               onPress={handleLogin}
               disabled={loading}
             >

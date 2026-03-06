@@ -79,26 +79,26 @@ export default function NotificationsScreen() {
         <View>
           <Text className="text-xl font-bold text-gray-900">Notifications</Text>
           {unreadCount > 0 && (
-            <Text className="text-xs text-indigo-600 mt-0.5">{unreadCount} unread</Text>
+            <Text className="text-xs text-emerald-700 mt-0.5">{unreadCount} unread</Text>
           )}
         </View>
         {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllRead} className="px-3 py-1.5 bg-indigo-50 rounded-full">
-            <Text className="text-xs text-indigo-600 font-medium">Mark all read</Text>
+          <TouchableOpacity onPress={markAllRead} className="px-3 py-1.5 bg-emerald-50 rounded-full">
+            <Text className="text-xs text-emerald-700 font-medium">Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#6366F1" />
+          <ActivityIndicator color="#059669" />
         </View>
       ) : (
         <FlatList
           data={notifications}
           keyExtractor={n => n.id}
           contentContainerStyle={{ paddingVertical: 12, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
           ListEmptyComponent={
             <View className="items-center py-16">
               <Text className="text-gray-400 text-sm">No notifications yet.</Text>
@@ -107,14 +107,14 @@ export default function NotificationsScreen() {
           ItemSeparatorComponent={() => <View className="h-px bg-gray-100 mx-5" />}
           renderItem={({ item: n }) => (
             <TouchableOpacity
-              className={`px-5 py-4 flex-row gap-3 ${!n.is_read ? 'bg-indigo-50/60' : 'bg-white'}`}
+              className={`px-5 py-4 flex-row gap-3 ${!n.is_read ? 'bg-emerald-50/60' : 'bg-white'}`}
               onPress={() => handleTap(n)}
             >
               <Text className="text-xl mt-0.5">{typeIcon[n.type] ?? '🔔'}</Text>
               <View className="flex-1">
                 <View className="flex-row items-center justify-between">
                   <Text className={`text-sm font-semibold ${!n.is_read ? 'text-gray-900' : 'text-gray-700'}`}>{n.title}</Text>
-                  {!n.is_read && <View className="w-2 h-2 rounded-full bg-indigo-500" />}
+                  {!n.is_read && <View className="w-2 h-2 rounded-full bg-emerald-500" />}
                 </View>
                 {n.body ? <Text className="text-gray-500 text-xs mt-0.5 leading-4">{n.body}</Text> : null}
                 <Text className="text-gray-400 text-xs mt-1">{new Date(n.created_at).toLocaleString()}</Text>

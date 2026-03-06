@@ -75,7 +75,7 @@ export default function RequestsScreen() {
           <TouchableOpacity
             key={f.value}
             onPress={() => setFilter(f.value)}
-            className={`px-3 py-1.5 rounded-full ${filter === f.value ? 'bg-indigo-500' : 'bg-gray-100'}`}
+            className={`px-3 py-1.5 rounded-full ${filter === f.value ? 'bg-emerald-600' : 'bg-gray-100'}`}
           >
             <Text className={`text-xs font-medium ${filter === f.value ? 'text-white' : 'text-gray-600'}`}>
               {f.label}
@@ -86,14 +86,14 @@ export default function RequestsScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#6366F1" />
+          <ActivityIndicator color="#059669" />
         </View>
       ) : (
         <FlatList
           data={requests}
           keyExtractor={r => r.id}
           contentContainerStyle={{ paddingBottom: 24, paddingTop: 12, paddingHorizontal: 20 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
           ListEmptyComponent={
             <View className="items-center py-16">
               <Text className="text-gray-400 text-sm">No requests found.</Text>
@@ -107,7 +107,7 @@ export default function RequestsScreen() {
             >
               <View
                 className="w-1 self-stretch rounded-full mr-3"
-                style={{ backgroundColor: (r.leave_type as any)?.color_hex ?? '#6366F1' }}
+                style={{ backgroundColor: (r.leave_type as any)?.color_hex ?? '#059669' }}
               />
               <View className="flex-1">
                 <View className="flex-row items-center justify-between mb-1">

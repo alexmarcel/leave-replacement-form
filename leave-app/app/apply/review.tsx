@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useApply } from '@/context/apply'
 import { useAuth } from '@/context/auth'
-import { formatDate } from '@/lib/dates'
+import { formatDate, formatDateWithDay } from '@/lib/dates'
 import { sendPushNotification } from '@/lib/notifications'
 import { ChevronLeft, Check } from 'lucide-react-native'
 
@@ -149,8 +149,8 @@ export default function ApplyReview() {
         <View className="bg-white rounded-2xl overflow-hidden border border-gray-100 mb-5">
           <Text className="px-4 pt-3 pb-1 text-sm font-semibold text-gray-700">Leave Summary</Text>
           <SummaryRow label="Type" value={state.leaveTypeName} />
-          <SummaryRow label="From" value={formatDate(state.startDate)} />
-          <SummaryRow label="To" value={formatDate(state.endDate)} />
+          <SummaryRow label="From" value={formatDateWithDay(state.startDate)} />
+          <SummaryRow label="To" value={formatDateWithDay(state.endDate)} />
           <SummaryRow label="Working Days" value={`${state.totalDays} day${state.totalDays !== 1 ? 's' : ''}`} />
           {state.reason ? <SummaryRow label="Reason" value={state.reason} /> : null}
           {state.replacementName ? <SummaryRow label="Replacement" value={state.replacementName} /> : null}
@@ -160,7 +160,7 @@ export default function ApplyReview() {
         <View className="mb-5">
           <Text className="text-sm font-semibold text-gray-700 mb-2">Select Approver *</Text>
           {loadingApprovers ? (
-            <ActivityIndicator color="#6366F1" />
+            <ActivityIndicator color="#059669" />
           ) : approvers.length === 0 ? (
             <View className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-4">
               <Text className="text-amber-800 font-medium text-sm">No approvers available</Text>
@@ -175,7 +175,7 @@ export default function ApplyReview() {
                 return (
                   <TouchableOpacity
                     key={a.id}
-                    className={`bg-white rounded-2xl px-4 py-3.5 border flex-row items-center ${selected ? 'border-indigo-500' : 'border-gray-100'}`}
+                    className={`bg-white rounded-2xl px-4 py-3.5 border flex-row items-center ${selected ? 'border-emerald-600' : 'border-gray-100'}`}
                     onPress={() => set({ approverId: a.id, approverName: a.full_name })}
                   >
                     <View className="flex-1">
@@ -184,7 +184,7 @@ export default function ApplyReview() {
                       {a.department ? <Text className="text-gray-400 text-xs">{a.department}</Text> : null}
                     </View>
                     {selected && (
-                      <View className="w-6 h-6 bg-indigo-500 rounded-full items-center justify-center">
+                      <View className="w-6 h-6 bg-emerald-600 rounded-full items-center justify-center">
                         <Check size={14} color="white" />
                       </View>
                     )}
@@ -196,7 +196,7 @@ export default function ApplyReview() {
         </View>
 
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${submitting || approvers.length === 0 ? 'bg-indigo-300' : 'bg-indigo-500'}`}
+          className={`rounded-xl py-4 items-center ${submitting || approvers.length === 0 ? 'bg-emerald-300' : 'bg-emerald-600'}`}
           onPress={handleSubmit}
           disabled={submitting || approvers.length === 0}
         >

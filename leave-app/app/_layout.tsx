@@ -35,7 +35,7 @@ function Guard() {
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#059669" />
       </View>
     )
   }

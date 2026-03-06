@@ -73,7 +73,7 @@ export default function ScheduleScreen() {
             <TouchableOpacity
               key={m}
               onPress={() => setMode(m)}
-              className={`px-4 py-1.5 rounded-full ${mode === m ? 'bg-indigo-500' : 'bg-gray-100'}`}
+              className={`px-4 py-1.5 rounded-full ${mode === m ? 'bg-emerald-600' : 'bg-gray-100'}`}
             >
               <Text className={`text-xs font-medium capitalize ${mode === m ? 'text-white' : 'text-gray-600'}`}>{m}</Text>
             </TouchableOpacity>
@@ -94,14 +94,14 @@ export default function ScheduleScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#6366F1" />
+          <ActivityIndicator color="#059669" />
         </View>
       ) : (
         <FlatList
           data={entries}
           keyExtractor={e => e.leave_request_id}
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
           ListEmptyComponent={
             <View className="items-center py-16">
               <Text className="text-gray-400 text-sm">No approved leave in this period.</Text>

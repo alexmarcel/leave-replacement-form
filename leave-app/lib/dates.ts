@@ -16,6 +16,10 @@ export function formatDate(date: string): string {
   return format(parseISO(date), 'd MMM yyyy')
 }
 
+export function formatDateWithDay(date: string): string {
+  return format(parseISO(date), 'EEEE, d MMM yyyy')
+}
+
 export function formatDateShort(date: string): string {
   return format(parseISO(date), 'd MMM')
 }

@@ -77,7 +77,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color="#059669" />
       </SafeAreaView>
     )
   }
@@ -87,7 +87,7 @@ export default function HomeScreen() {
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 24 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366F1" />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
       >
         {/* Header */}
         <View className="bg-white px-5 pt-4 pb-5 border-b border-gray-100">
@@ -100,12 +100,12 @@ export default function HomeScreen() {
         {(profile?.role === 'staff' || profile?.role === 'approver') && (
           <View className="px-5 pt-4">
             <TouchableOpacity
-              className="bg-indigo-500 rounded-2xl px-5 py-4 flex-row items-center justify-between"
+              className="bg-emerald-600 rounded-2xl px-5 py-4 flex-row items-center justify-between"
               onPress={() => router.push('/apply')}
             >
               <View>
                 <Text className="text-white font-semibold text-base">Apply for Leave</Text>
-                <Text className="text-indigo-200 text-xs mt-0.5">Tap to submit a new request</Text>
+                <Text className="text-emerald-200 text-xs mt-0.5">Tap to submit a new request</Text>
               </View>
               <PlusCircle size={28} color="white" />
             </TouchableOpacity>
