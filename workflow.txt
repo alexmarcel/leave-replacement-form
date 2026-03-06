@@ -1,0 +1,316 @@
+## Complete System Workflow
+
+---
+
+### 👤 Phase 0 — Admin Setup (One Time)
+
+**Where:** Next.js dashboard
+
+1. Admin logs in with email and password
+2. Supabase Auth validates credentials and returns a session
+3. Middleware checks `profiles.role = 'admin'`, grants access to the dashboard
+4. Admin creates staff accounts one by one:
+   - Fills in full name, email, phone, jawatan, department, role, temporary password
+   - Dashboard calls `POST /api/staff` which uses the service role key to call `supabase.auth.admin.createUser()`
+   - Supabase creates the `auth.users` row
+   - `handle_new_user` trigger fires automatically and inserts the `profiles` row
+   - Staff member receives their login credentials
+5. Admin configures leave types (name, max days, replacement required, colour)
+6. Admin adds public holidays for the year
+7. Admin sets the replacement policy in Settings:
+   - **One-to-One** — a staff can only cover one person at a time
+   - **One-to-Many** — a staff can cover many people simultaneously
+   - Saved to `system_settings.allow_multiple_replacements`
+
+---
+
+### 📱 Phase 1 — Staff Logs In (Mobile App)
+
+**Where:** Expo app on iOS or Android
+
+1. Staff opens the app and enters email + password
+2. App calls `supabase.auth.signInWithPassword()`
+3. Supabase validates and returns a session token
+4. App fetches the staff's own `profiles` row to load name, jawatan, role
+5. App requests push notification permission from the device
+6. If granted, Expo SDK returns the device's unique **Expo Push Token**
+7. App saves the token to `profiles.expo_push_token` via a Supabase update
+8. Staff lands on the Home screen
+9. On every subsequent app open, the session is refreshed automatically
+
+---
+
+### 📱 Phase 2 — Staff A Applies for Leave
+
+**Where:** Expo mobile app
+
+**Step 1 — Fill in the leave form**
+1. Staff A taps "Apply Leave"
+2. App fetches all active leave types from `leave_types` where `is_active = TRUE`
+3. Staff A picks a leave type, start date, end date, and optional reason
+4. App fetches `public_holidays` and calculates `total_days`:
+   - Loops through every date in the range
+   - Skips Saturdays and Sundays
+   - Skips any date found in `public_holidays`
+   - Remaining days = `total_days`
+5. A draft record is created in `leave_requests` with `status = 'draft'`
+
+**Step 2 — Pick a replacement (Staff B)**
+
+*This step is skipped if the selected leave type has `requires_replacement = FALSE`*
+
+1. App calls `supabase.rpc('get_available_replacements', { p_start_date, p_end_date, p_requester_id })`
+2. The function reads `system_settings.allow_multiple_replacements`
+3. It returns only staff who are:
+   - Active (`is_active = TRUE`)
+   - Role = `'staff'`
+   - Not the requester themselves
+   - Not already on approved leave during the same period
+   - Not already assigned as a replacement during the same period *(only applies if One-to-One mode)*
+   - The date range contains at least one working day
+4. Staff A sees the filtered list with names, jawatan, department
+5. Staff A selects one person — this becomes **Staff B**
+
+**Step 3 — Pick an approver (Staff C)**
+1. App fetches all profiles where `role = 'approver'` and `is_active = TRUE`
+2. Staff A selects one person — this becomes **Staff C**
+
+**Step 4 — Submit**
+1. Staff A taps Submit on the review screen
+2. App updates `leave_requests`:
+   - `replacement_id` = Staff B's id
+   - `approver_id` = Staff C's id
+   - `replacement_response` = `'pending'`
+   - `status` = `'pending_replacement'`
+3. `trg_leave_audit` trigger fires → inserts into `leave_audit_log`:
+   - `old_status = 'draft'`, `new_status = 'pending_replacement'`
+4. App inserts a row into `notifications` for Staff B:
+   - `type = 'replacement_requested'`
+   - `title = 'Replacement Request'`
+   - `body = 'Ahmad bin Ali is requesting you as replacement from 3 Mac to 7 Mac'`
+5. App calls Expo Push API with Staff B's `expo_push_token`
+6. Expo routes the notification to APNs (iOS) or FCM (Android)
+7. Staff B's device shows a push notification
+
+---
+
+### 📱 Phase 3 — Staff B Responds to Replacement Request
+
+**Where:** Expo mobile app (Staff B's device)
+
+1. Staff B receives a push notification on their device
+2. Tapping it deep-links into the app and opens the request detail screen
+3. Staff B sees:
+   - Staff A's name, jawatan, department
+   - Leave type, date range, total days
+   - Reason (if provided)
+4. Staff B taps **Agree** or **Reject** with an optional note
+
+---
+
+#### 3a — Staff B Rejects
+
+1. App updates `leave_requests`:
+   - `replacement_response` = `'rejected'`
+   - `replacement_responded_at` = now
+   - `replacement_notes` = Staff B's note (optional)
+   - `status` = `'replacement_rejected'`
+2. Audit log entry written: `pending_replacement → replacement_rejected`
+3. App inserts notification for Staff A:
+   - `type = 'replacement_rejected'`
+   - `body = 'Staff B declined your replacement request. Please select another replacement.'`
+4. Expo push notification sent to Staff A's device
+5. Staff A is brought back to the replacement picker to choose someone else
+6. The cycle repeats from Phase 2 Step 2 with a new Staff B
+
+---
+
+#### 3b — Staff B Agrees
+
+1. App updates `leave_requests`:
+   - `replacement_response` = `'agreed'`
+   - `replacement_responded_at` = now
+   - `replacement_notes` = Staff B's note (optional)
+   - `approver_response` = `'pending'`
+   - `status` = `'pending_approval'`
+2. Audit log entry written: `pending_replacement → pending_approval`
+3. App inserts notification for Staff A:
+   - `type = 'replacement_agreed'`
+   - `body = 'Staff B agreed to cover you. Your request has been forwarded to Staff C for approval.'`
+4. App inserts notification for Staff C:
+   - `type = 'approval_requested'`
+   - `body = 'Ahmad bin Ali's leave request from 3-7 Mac is pending your approval.'`
+5. Expo push notifications sent to both Staff A and Staff C
+6. Staff A sees their request status update to "Pending Approval" in the app
+
+---
+
+### 📱 Phase 4 — Staff C Approves or Rejects
+
+**Where:** Expo mobile app (Staff C's device)
+
+1. Staff C receives a push notification
+2. Tapping it opens the request detail screen
+3. Staff C sees the full picture:
+   - Staff A's details (name, jawatan, department, dates, reason)
+   - Staff B's name, jawatan, and agreement notes
+4. Staff C taps **Approve** or **Reject** with optional notes
+
+---
+
+#### 4a — Staff C Rejects
+
+1. App updates `leave_requests`:
+   - `approver_response` = `'rejected'`
+   - `approver_responded_at` = now
+   - `approver_notes` = Staff C's reason (optional)
+   - `status` = `'rejected'`
+2. Audit log entry written: `pending_approval → rejected`
+3. App inserts notification for Staff A:
+   - `type = 'request_rejected'`
+   - `body = 'Your leave request from 3-7 Mac was rejected by Staff C.'`
+4. Expo push sent to Staff A
+5. Staff A sees their request marked as Rejected
+6. Staff A may submit a brand new leave request if they wish
+
+---
+
+#### 4b — Staff C Approves ✅
+
+1. App updates `leave_requests`:
+   - `approver_response` = `'approved'`
+   - `approver_responded_at` = now
+   - `approver_notes` = Staff C's notes (optional)
+   - `status` = `'approved'`
+2. Audit log entry written: `pending_approval → approved`
+3. The leave now appears in the `leave_schedule` view — visible to everyone on the schedule calendar
+4. The leave appears in `staff_on_leave_today` on the day(s) of the leave
+5. App inserts notification for Staff A:
+   - `type = 'request_approved'`
+   - `body = 'Your leave from 3-7 Mac has been approved.'`
+6. App inserts notification for Staff B:
+   - `type = 'request_approved'`
+   - `body = 'You are confirmed as replacement for Ahmad bin Ali from 3-7 Mac.'`
+7. Expo push notifications sent to both Staff A and Staff B
+
+---
+
+### 🔄 Phase 5 — Cancellation (Any Point Before Approved)
+
+**Where:** Expo mobile app (Staff A's device)
+
+Staff A can cancel while status is any of:
+`draft` `pending_replacement` `replacement_rejected` `pending_approval`
+
+1. Staff A opens their request and taps Cancel
+2. App updates `leave_requests`: `status = 'cancelled'`
+3. Audit log entry written recording the cancellation
+4. Notifications sent depending on current status:
+   - If `pending_replacement` → notify Staff B: *"Ahmad cancelled their request. You no longer need to respond."*
+   - If `pending_approval` → notify both Staff B and Staff C: *"Ahmad cancelled their leave request."*
+5. Request is permanently cancelled — Staff A must start fresh
+
+---
+
+### 📅 Phase 6 — Leave Schedule (All Users, Read Only)
+
+**Where:** Expo mobile app — Leave Schedule tab
+
+1. Every user (staff, approver, admin) can open the Leave Schedule screen
+2. App queries the `leave_schedule` view with a date range filter:
+   - **Day view** → `WHERE start_date <= today AND end_date >= today`
+   - **Week view** → `WHERE start_date <= week_end AND end_date >= week_start`
+   - **Month view** → `WHERE start_date <= month_end AND end_date >= month_start`
+3. Each entry is colour-coded using `leave_type.color_hex`
+4. User can optionally filter by department or leave type
+5. Read only — no actions available from this screen
+6. The `staff_on_leave_today` view is used as a shortcut for the day view
+
+---
+
+### 🔧 Phase 7 — Admin Override (Any Time)
+
+**Where:** Next.js dashboard → Leave Requests → Request Detail
+
+1. Admin finds any request using the status filter tabs
+2. Opens the request detail page
+3. Sees the full request details, all three parties, and the full audit timeline
+4. The amber **Admin Override** panel appears for any request not yet in a final state
+5. Admin can:
+   - **Force Approve** → sets `status = 'approved'`, `approver_response = 'approved'`
+   - **Force Reject** → sets `status = 'rejected'`, `approver_response = 'rejected'`
+   - **Cancel** → sets `status = 'cancelled'`
+6. Admin can add a note explaining the override
+7. Audit log records the change with admin's user id as `changed_by`
+
+---
+
+### 📊 Phase 8 — Ongoing Admin Monitoring
+
+**Where:** Next.js dashboard
+
+The admin dashboard provides a live view at all times:
+
+- **Dashboard home** — stats cards (active staff, on leave today, pending approval, total approved), who's on leave today, recent requests feed
+- **Leave Requests** — full filterable table of every request across all statuses, with the ability to drill into any request
+- **Staff** — manage all staff accounts, deactivate/reactivate, change roles, update details
+- **Leave Types** — add new types, change colours, toggle replacement requirement, set max days
+- **Public Holidays** — add or remove holidays grouped by year
+- **Settings** — toggle the replacement policy between One-to-One and One-to-Many
+
+---
+
+### State Machine — Complete
+
+```
+                    ┌─────────────────────────────────┐
+                    │            [draft]               │
+                    │   Staff A fills in the form      │
+                    └──────────────┬──────────────────-┘
+                                   │ Staff A submits
+                                   ▼
+                    ┌──────────────────────────────────┐
+                    │      [pending_replacement]        │
+                    │   Waiting for Staff B to respond  │
+                    └──────┬───────────────────┬───────┘
+                           │                   │
+               Staff B     │                   │  Staff B
+               agrees      │                   │  rejects
+                           │                   ▼
+                           │    ┌──────────────────────────────┐
+                           │    │     [replacement_rejected]    │
+                           │    │  Staff A picks new Staff B    │
+                           │    └──────────────┬───────────────┘
+                           │                   │ Staff A resubmits
+                           │                   └──────► (back to pending_replacement)
+                           ▼
+                    ┌──────────────────────────────────┐
+                    │        [pending_approval]         │
+                    │   Waiting for Staff C to decide   │
+                    └──────┬───────────────────┬───────┘
+                           │                   │
+               Staff C     │                   │  Staff C
+               approves    │                   │  rejects
+                           ▼                   ▼
+                    ┌────────────┐     ┌──────────────┐
+                    │ [approved] │     │  [rejected]  │
+                    │     ✅     │     │      ❌      │
+                    └────────────┘     └──────────────┘
+
+  Any state before [approved] ──────────────────────► [cancelled]
+  (Staff A cancels, or Admin forces cancellation)
+```
+First-time setup workflow:
+
+1. Visit /setup
+   → If no admin exists: shows the registration form
+   → If admin already exists: redirects to /login (sealed permanently)
+
+2. Fill in full name, email, password (min 8 chars), confirm password → Submit
+
+3. /api/setup creates the auth user + patches profile role to 'admin'
+
+4. Redirects to /login?setup=done
+   → Green banner: "Admin account created successfully. Sign in to continue."
+
+5. Log in → lands on /dashboard

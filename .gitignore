@@ -1,0 +1,73 @@
+# ========================
+# Dependencies
+# ========================
+node_modules/
+.pnp
+.pnp.js
+
+# ========================
+# Environment variables
+# ========================
+.env
+.env.local
+.env.development
+.env.production
+.env*.local
+
+# ========================
+# Next.js (leave-admin)
+# ========================
+leave-admin/.next/
+leave-admin/out/
+leave-admin/tsconfig.tsbuildinfo
+
+# ========================
+# Expo / React Native (leave-app)
+# ========================
+leave-app/.expo/
+leave-app/dist/
+leave-app/expo-env.d.ts
+
+# Android
+leave-app/android/
+# iOS
+leave-app/ios/
+
+# ========================
+# Build outputs
+# ========================
+build/
+dist/
+out/
+
+# ========================
+# Logs
+# ========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========================
+# OS files
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Editor / Tools
+# ========================
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+
+# ========================
+# Package manager locks
+# (keep lock files for reproducible installs)
+# ========================
+# Uncomment to ignore locks:
+# package-lock.json
+# yarn.lock
