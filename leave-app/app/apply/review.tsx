@@ -34,7 +34,7 @@ export default function ApplyReview() {
       const { data } = await supabase
         .from('profiles')
         .select('id, full_name, jawatan, department, expo_push_token')
-        .in('role', ['approver', 'admin'])
+        .eq('role', 'approver')
         .eq('is_active', true)
         .neq('id', profile!.id)
         .order('full_name')
@@ -161,6 +161,13 @@ export default function ApplyReview() {
           <Text className="text-sm font-semibold text-gray-700 mb-2">Select Approver *</Text>
           {loadingApprovers ? (
             <ActivityIndicator color="#6366F1" />
+          ) : approvers.length === 0 ? (
+            <View className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-4">
+              <Text className="text-amber-800 font-medium text-sm">No approvers available</Text>
+              <Text className="text-amber-600 text-xs mt-1">
+                No active approver accounts exist yet. Please ask your admin to create an approver account before submitting a leave request.
+              </Text>
+            </View>
           ) : (
             <View className="gap-2">
               {approvers.map(a => {
@@ -189,9 +196,9 @@ export default function ApplyReview() {
         </View>
 
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${submitting ? 'bg-indigo-300' : 'bg-indigo-500'}`}
+          className={`rounded-xl py-4 items-center ${submitting || approvers.length === 0 ? 'bg-indigo-300' : 'bg-indigo-500'}`}
           onPress={handleSubmit}
-          disabled={submitting}
+          disabled={submitting || approvers.length === 0}
         >
           {submitting
             ? <ActivityIndicator color="white" />

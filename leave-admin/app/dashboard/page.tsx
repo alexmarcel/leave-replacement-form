@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users, UserCheck, Clock, CheckCircle } from 'lucide-react'
+import { Users, UserCheck, Clock, CheckCircle, ShieldCheck } from 'lucide-react'
 import { StatusBadge } from '@/components/status-badge'
 import Link from 'next/link'
 
@@ -10,12 +10,14 @@ export default async function DashboardPage() {
 
   const [
     { count: totalStaff },
+    { count: totalApprovers },
     { data: onLeaveToday },
     { count: pendingApproval },
     { count: totalApproved },
     { data: recentRequests },
   ] = await Promise.all([
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'staff').eq('is_active', true),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['staff', 'approver', 'admin']).eq('is_active', true),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'approver').eq('is_active', true),
     supabase.from('staff_on_leave_today').select('*'),
     supabase.from('leave_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
     supabase.from('leave_requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
@@ -31,10 +33,11 @@ export default async function DashboardPage() {
   ])
 
   const stats = [
-    { label: 'Active Staff',       value: totalStaff ?? 0,    icon: Users,       color: 'text-blue-600' },
-    { label: 'On Leave Today',     value: onLeaveToday?.length ?? 0, icon: UserCheck, color: 'text-orange-600' },
-    { label: 'Pending Approval',   value: pendingApproval ?? 0, icon: Clock,      color: 'text-yellow-600' },
-    { label: 'Total Approved',     value: totalApproved ?? 0,  icon: CheckCircle, color: 'text-green-600' },
+    { label: 'Active Staff',     value: totalStaff ?? 0,           icon: Users,        color: 'text-blue-600' },
+    { label: 'Active Approvers', value: totalApprovers ?? 0,        icon: ShieldCheck,  color: 'text-purple-600' },
+    { label: 'On Leave Today',   value: onLeaveToday?.length ?? 0,  icon: UserCheck,    color: 'text-orange-600' },
+    { label: 'Pending Approval', value: pendingApproval ?? 0,       icon: Clock,        color: 'text-yellow-600' },
+    { label: 'Total Approved',   value: totalApproved ?? 0,         icon: CheckCircle,  color: 'text-green-600' },
   ]
 
   return (
@@ -42,7 +45,7 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

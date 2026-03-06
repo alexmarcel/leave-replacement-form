@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert,
+  TextInput, ActivityIndicator, Alert, Platform, Modal,
 } from 'react-native'
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useApply } from '@/context/apply'
 import { useAuth } from '@/context/auth'
 import { calcWorkingDays } from '@/lib/dates'
-import type { LeaveType, PublicHoliday } from '@/lib/types'
-import { ChevronLeft, ChevronDown } from 'lucide-react-native'
-import { format, addDays } from 'date-fns'
+import type { LeaveType } from '@/lib/types'
+import { ChevronLeft, ChevronDown, CalendarDays } from 'lucide-react-native'
+import { format, parseISO } from 'date-fns'
 
 export default function ApplyStep1() {
   const router = useRouter()
@@ -23,7 +24,12 @@ export default function ApplyStep1() {
   const [showTypeMenu, setShowTypeMenu] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  const today = format(new Date(), 'yyyy-MM-dd')
+  // Date picker state
+  const [pickerTarget, setPickerTarget] = useState<'startDate' | 'endDate' | null>(null)
+  const [pickerDate, setPickerDate] = useState(new Date())
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
   useEffect(() => {
     async function load() {
@@ -43,14 +49,33 @@ export default function ApplyStep1() {
     setShowTypeMenu(false)
   }
 
-  function handleDateChange(field: 'startDate' | 'endDate', value: string) {
-    const newState: Partial<typeof state> = { [field]: value }
-    const start = field === 'startDate' ? value : state.startDate
-    const end = field === 'endDate' ? value : state.endDate
+  function openPicker(target: 'startDate' | 'endDate') {
+    const existing = target === 'startDate' ? state.startDate : state.endDate
+    setPickerDate(existing ? parseISO(existing) : new Date())
+    setPickerTarget(target)
+  }
+
+  function onPickerChange(event: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === 'android') {
+      setPickerTarget(null)
+      if (event.type === 'dismissed' || !selected) return
+    }
+    if (!selected || !pickerTarget) return
+    const dateStr = format(selected, 'yyyy-MM-dd')
+    const newState: Partial<typeof state> = { [pickerTarget]: dateStr }
+    const start = pickerTarget === 'startDate' ? dateStr : state.startDate
+    const end = pickerTarget === 'endDate' ? dateStr : state.endDate
     if (start && end && end >= start) {
       newState.totalDays = calcWorkingDays(start, end, holidays)
+    } else {
+      newState.totalDays = 0
     }
     set(newState)
+    if (Platform.OS === 'ios') setPickerDate(selected)
+  }
+
+  function closeiOSPicker() {
+    setPickerTarget(null)
   }
 
   function handleNext() {
@@ -70,8 +95,6 @@ export default function ApplyStep1() {
   if (loading) {
     return <SafeAreaView className="flex-1 bg-white items-center justify-center"><ActivityIndicator color="#6366F1" /></SafeAreaView>
   }
-
-  const maxDate = format(addDays(new Date(), 365), 'yyyy-MM-dd')
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -101,7 +124,7 @@ export default function ApplyStep1() {
               {leaveTypes.map(lt => (
                 <TouchableOpacity
                   key={lt.id}
-                  className="px-4 py-3 flex-row items-center border-b border-gray-50 last:border-b-0"
+                  className="px-4 py-3 flex-row items-center border-b border-gray-50"
                   onPress={() => selectType(lt)}
                 >
                   <View className="w-3 h-3 rounded-full mr-3" style={{ backgroundColor: lt.color_hex }} />
@@ -118,33 +141,45 @@ export default function ApplyStep1() {
           )}
         </View>
 
-        {/* Dates */}
+        {/* Date Pickers */}
         <View className="flex-row gap-3 mb-5">
           <View className="flex-1">
             <Text className="text-sm font-medium text-gray-700 mb-2">Start Date *</Text>
-            <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900"
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9ca3af"
-              value={state.startDate}
-              onChangeText={v => handleDateChange('startDate', v)}
-              keyboardType="numeric"
-            />
+            <TouchableOpacity
+              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex-row items-center justify-between"
+              onPress={() => openPicker('startDate')}
+            >
+              <Text className={state.startDate ? 'text-gray-900' : 'text-gray-400'}>
+                {state.startDate ? format(parseISO(state.startDate), 'd MMM yyyy') : 'Select…'}
+              </Text>
+              <CalendarDays size={16} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
           <View className="flex-1">
             <Text className="text-sm font-medium text-gray-700 mb-2">End Date *</Text>
-            <TextInput
-              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900"
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#9ca3af"
-              value={state.endDate}
-              onChangeText={v => handleDateChange('endDate', v)}
-              keyboardType="numeric"
-            />
+            <TouchableOpacity
+              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex-row items-center justify-between"
+              onPress={() => openPicker('endDate')}
+            >
+              <Text className={state.endDate ? 'text-gray-900' : 'text-gray-400'}>
+                {state.endDate ? format(parseISO(state.endDate), 'd MMM yyyy') : 'Select…'}
+              </Text>
+              <CalendarDays size={16} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Working days display */}
+        {/* Android picker — renders inline when visible */}
+        {Platform.OS === 'android' && pickerTarget && (
+          <DateTimePicker
+            value={pickerDate}
+            mode="date"
+            minimumDate={pickerTarget === 'endDate' && state.startDate ? parseISO(state.startDate) : today}
+            onChange={onPickerChange}
+          />
+        )}
+
+        {/* Working days */}
         {state.totalDays > 0 && (
           <View className="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 mb-5">
             <Text className="text-indigo-700 font-medium text-sm">
@@ -161,7 +196,7 @@ export default function ApplyStep1() {
             placeholder="Briefly describe the reason…"
             placeholderTextColor="#9ca3af"
             value={state.reason}
-            onChangeText={v => set({ reason: v })}
+            onChangeText={(v: string) => set({ reason: v })}
             multiline
             numberOfLines={3}
           />
@@ -176,6 +211,32 @@ export default function ApplyStep1() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* iOS picker — shown in a modal overlay */}
+      {Platform.OS === 'ios' && pickerTarget && (
+        <Modal transparent animationType="slide">
+          <View className="flex-1 justify-end bg-black/40">
+            <View className="bg-white rounded-t-2xl">
+              <View className="flex-row justify-between items-center px-5 py-3 border-b border-gray-100">
+                <Text className="text-gray-500 font-medium">
+                  {pickerTarget === 'startDate' ? 'Start Date' : 'End Date'}
+                </Text>
+                <TouchableOpacity onPress={closeiOSPicker}>
+                  <Text className="text-indigo-600 font-semibold text-base">Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={pickerDate}
+                mode="date"
+                display="spinner"
+                minimumDate={pickerTarget === 'endDate' && state.startDate ? parseISO(state.startDate) : today}
+                onChange={onPickerChange}
+                style={{ height: 200 }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
   )
 }

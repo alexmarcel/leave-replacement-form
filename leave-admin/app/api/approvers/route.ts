@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
-// GET /api/approvers — returns all active approvers + admins (for reassign dropdown)
+// GET /api/approvers — returns all active approvers (for reassign dropdown)
 export async function GET() {
   const supabase = await createClient()
 
@@ -14,7 +14,7 @@ export async function GET() {
   const { data: approvers } = await supabase
     .from('profiles')
     .select('id, full_name, role, jawatan')
-    .in('role', ['approver', 'admin'])
+    .eq('role', 'approver')
     .eq('is_active', true)
     .order('full_name')
 

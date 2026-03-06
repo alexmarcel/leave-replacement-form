@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, Text, SectionList, TouchableOpacity,
   ActivityIndicator, TextInput,
 } from 'react-native'
 import { useRouter } from 'expo-router'
@@ -18,6 +18,27 @@ interface Candidate {
   email: string
 }
 
+interface Section {
+  title: string
+  data: Candidate[]
+}
+
+function groupByDepartment(candidates: Candidate[]): Section[] {
+  const map = new Map<string, Candidate[]>()
+  for (const c of candidates) {
+    const dept = c.department?.trim() || 'No Department'
+    if (!map.has(dept)) map.set(dept, [])
+    map.get(dept)!.push(c)
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => {
+      if (a === 'No Department') return 1
+      if (b === 'No Department') return -1
+      return a.localeCompare(b)
+    })
+    .map(([title, data]) => ({ title, data }))
+}
+
 export default function ApplyStep2Replacement() {
   const router = useRouter()
   const { profile } = useAuth()
@@ -25,14 +46,21 @@ export default function ApplyStep2Replacement() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!profile?.id || !state.startDate || !state.endDate) {
+      setError('Missing date range or user profile. Go back and try again.')
+      setLoading(false)
+      return
+    }
     async function load() {
-      const { data } = await supabase.rpc('get_available_replacements', {
+      const { data, error: rpcError } = await supabase.rpc('get_available_replacements', {
         p_start_date: state.startDate,
         p_end_date: state.endDate,
         p_requester_id: profile!.id,
       })
+      if (rpcError) setError(rpcError.message)
       setCandidates(data ?? [])
       setLoading(false)
     }
@@ -44,6 +72,8 @@ export default function ApplyStep2Replacement() {
     (c.department ?? '').toLowerCase().includes(search.toLowerCase()) ||
     (c.jawatan ?? '').toLowerCase().includes(search.toLowerCase())
   )
+
+  const sections = groupByDepartment(filtered)
 
   function select(c: Candidate) {
     set({ replacementId: c.id, replacementName: c.full_name })
@@ -79,17 +109,33 @@ export default function ApplyStep2Replacement() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#6366F1" />
         </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <Text className="text-red-500 text-sm text-center">{error}</Text>
+        </View>
       ) : (
-        <FlatList
-          data={filtered}
+        <SectionList
+          sections={sections}
           keyExtractor={c => c.id}
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          stickySectionHeadersEnabled={false}
           ListEmptyComponent={
             <View className="items-center py-16">
               <Text className="text-gray-400 text-sm">No available replacements found.</Text>
-              <Text className="text-gray-400 text-xs mt-1">All eligible staff may already be on leave.</Text>
+              <Text className="text-gray-400 text-xs mt-1">
+                {candidates.length === 0
+                  ? 'No staff accounts exist yet. Ask an admin to create staff accounts.'
+                  : 'All eligible staff may already be on leave during this period.'}
+              </Text>
             </View>
           }
+          renderSectionHeader={({ section }) => (
+            <View className="mt-4 mb-2 first:mt-0">
+              <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                {section.title}
+              </Text>
+            </View>
+          )}
           ItemSeparatorComponent={() => <View className="h-2" />}
           renderItem={({ item: c }) => {
             const selected = state.replacementId === c.id
@@ -101,7 +147,6 @@ export default function ApplyStep2Replacement() {
                 <View className="flex-1">
                   <Text className="font-semibold text-gray-900">{c.full_name}</Text>
                   {c.jawatan ? <Text className="text-gray-500 text-sm">{c.jawatan}</Text> : null}
-                  {c.department ? <Text className="text-gray-400 text-xs">{c.department}</Text> : null}
                 </View>
                 {selected && (
                   <View className="w-6 h-6 bg-indigo-500 rounded-full items-center justify-center">
