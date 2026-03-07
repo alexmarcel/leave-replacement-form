@@ -117,13 +117,13 @@ export default function RequestsScreen() {
                   <StatusBadge status={r.status} />
                 </View>
                 <Text className="text-gray-500 text-sm">
-                  {formatDateShort(r.start_date)} → {formatDateShort(r.end_date)} · {r.total_days} day{r.total_days !== 1 ? 's' : ''}
+                  {formatDateShort(r.start_date)} to {formatDateShort(r.end_date)} · {r.total_days} day{r.total_days !== 1 ? 's' : ''}
                 </Text>
                 <Text className="text-gray-400 text-xs mt-1">
                   Submitted {new Date(r.created_at).toLocaleDateString()}
                 </Text>
               </View>
-              <ChevronRight size={16} color="#d1d5db" className="ml-2" />
+              <ChevronRight size={18} color="#d1d5db" className="ml-2" />
             </TouchableOpacity>
           )}
         />
