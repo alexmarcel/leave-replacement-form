@@ -105,7 +105,7 @@ export default function RequestsScreen() {
           renderItem={({ item: r }) => (
             <TouchableOpacity
               className="bg-white rounded-2xl px-4 py-4 border border-gray-100 flex-row items-center"
-              onPress={() => router.push(`/request/${r.id}`)}
+              onPress={() => router.push(`/request/${r.id}?from=requests`)}
             >
               <View
                 className="w-1 self-stretch rounded-full mr-3"

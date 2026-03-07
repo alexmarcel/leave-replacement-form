@@ -1,7 +1,7 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, TextInput, Alert,
+  ActivityIndicator, TextInput, Alert, BackHandler,
 } from 'react-native'
 import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -16,7 +16,7 @@ import { sendPushNotification } from '@/lib/notifications'
 const FINAL: LeaveStatus[] = ['approved', 'rejected', 'cancelled']
 
 export default function RequestDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>()
   const { profile } = useAuth()
   const router = useRouter()
 
@@ -27,6 +27,15 @@ export default function RequestDetailScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [showNotes, setShowNotes] = useState(false)
+
+  useEffect(() => {
+    if (from !== 'requests') return
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.replace('/(tabs)/requests')
+      return true
+    })
+    return () => sub.remove()
+  }, [from])
 
   const loadRequest = useCallback(async () => {
     const [{ data: req }, { data: audit }] = await Promise.all([
@@ -278,7 +287,7 @@ export default function RequestDetailScreen() {
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Nav bar */}
       <View className="bg-white px-4 py-3 flex-row items-center border-b border-gray-100">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+        <TouchableOpacity onPress={() => from === 'requests' ? router.replace('/(tabs)/requests') : router.canGoBack() ? router.back() : router.replace('/(tabs)/requests')} className="mr-3 p-1">
           <ChevronLeft size={22} color="#374151" />
         </TouchableOpacity>
         <Text className="text-lg font-bold text-gray-900 flex-1">Request Detail</Text>
