@@ -35,12 +35,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ id: data.user?.id }, { status: 201 })
 }
 
-// PATCH /api/staff — update a staff profile
+// PATCH /api/staff — update a staff profile (and optionally reset password)
 export async function PATCH(req: NextRequest) {
   const admin = await requireAdmin()
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id, full_name, phone, jawatan, department, role, is_active } = await req.json()
+  const { id, full_name, phone, jawatan, department, role, is_active, newPassword } = await req.json()
 
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 })
 
@@ -51,6 +51,13 @@ export async function PATCH(req: NextRequest) {
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+
+  if (newPassword) {
+    if (newPassword.length < 6) return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 })
+    const adminClient = createAdminClient()
+    const { error: pwErr } = await adminClient.auth.admin.updateUserById(id, { password: newPassword })
+    if (pwErr) return NextResponse.json({ error: pwErr.message }, { status: 400 })
+  }
 
   return NextResponse.json({ ok: true })
 }

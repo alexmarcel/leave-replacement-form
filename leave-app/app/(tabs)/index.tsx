@@ -20,6 +20,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [pendingActions, setPendingActions] = useState<LeaveRequest[]>([])
+  const [replacingFor, setReplacingFor] = useState<LeaveRequest[]>([])
   const [onLeaveToday, setOnLeaveToday] = useState<LeaveScheduleEntry[]>([])
   const [upcoming, setUpcoming] = useState<LeaveScheduleEntry[]>([])
 
@@ -28,7 +29,7 @@ export default function HomeScreen() {
     const today = format(new Date(), 'yyyy-MM-dd')
     const twoWeeksLater = format(addDays(new Date(), 14), 'yyyy-MM-dd')
 
-    const [pendingRes, todayRes, upcomingRes] = await Promise.all([
+    const [pendingRes, replacingRes, todayRes, upcomingRes] = await Promise.all([
       // Pending actions for ME
       supabase
         .from('leave_requests')
@@ -47,6 +48,18 @@ export default function HomeScreen() {
         )
         .order('created_at', { ascending: false }),
 
+      // Requests I have agreed to cover (agreed + awaiting approval, or fully approved)
+      supabase
+        .from('leave_requests')
+        .select(`
+          id, status, start_date, end_date, total_days,
+          requester:profiles!requester_id(id, full_name, jawatan, department),
+          leave_type:leave_types!leave_type_id(name, color_hex)
+        `)
+        .eq('replacement_id', profile.id)
+        .in('status', ['pending_approval', 'approved'])
+        .order('start_date', { ascending: true }),
+
       // On leave today
       supabase
         .from('leave_schedule')
@@ -64,6 +77,7 @@ export default function HomeScreen() {
     ])
 
     setPendingActions((pendingRes.data ?? []) as unknown as LeaveRequest[])
+    setReplacingFor((replacingRes.data ?? []) as unknown as LeaveRequest[])
     setOnLeaveToday((todayRes.data ?? []) as LeaveScheduleEntry[])
     setUpcoming((upcomingRes.data ?? []) as LeaveScheduleEntry[])
     setLoading(false)
@@ -110,6 +124,30 @@ export default function HomeScreen() {
               <PlusCircle size={28} color="white" />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Covering For */}
+        {replacingFor.length > 0 && (
+          <Section title={`Covering For (${replacingFor.length})`} accent="bg-emerald-500">
+            {replacingFor.map(r => (
+              <TouchableOpacity
+                key={r.id}
+                className="px-4 py-3 border-b border-gray-50 last:border-b-0"
+                onPress={() => router.push(`/request/${r.id}`)}
+              >
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 mr-3">
+                    <Text className="text-xs text-emerald-700 font-medium mb-0.5">Replacement for</Text>
+                    <Text className="text-gray-900 font-semibold">{(r.requester as any)?.full_name ?? '—'}</Text>
+                    <Text className="text-gray-500 text-xs mt-0.5">
+                      {(r.leave_type as any)?.name} · {formatDateShort(r.start_date)} → {formatDateShort(r.end_date)} ({r.total_days}d)
+                    </Text>
+                  </View>
+                  <StatusBadge status={r.status} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </Section>
         )}
 
         {/* Pending Actions */}

@@ -22,7 +22,7 @@ interface Props {
 }
 
 const emptyForm = {
-  full_name: '', email: '', phone: '', jawatan: '', department: '', role: 'staff' as Role, password: '',
+  full_name: '', email: '', phone: '', jawatan: '', department: '', role: 'staff' as Role, password: '', newPassword: '',
 }
 
 export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props) {
@@ -39,6 +39,7 @@ export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props)
         department: editing.department ?? '',
         role: editing.role,
         password: '',
+        newPassword: '',
       })
     } else {
       setForm(emptyForm)
@@ -65,6 +66,7 @@ export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props)
           jawatan: form.jawatan || null,
           department: form.department || null,
           role: form.role,
+          newPassword: form.newPassword || undefined,
         }),
       })
       if (!res.ok) {
@@ -141,10 +143,15 @@ export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props)
               <Label>Department</Label>
               <Input value={form.department} onChange={e => set('department', e.target.value)} placeholder="Kewangan" />
             </div>
-            {!editing && (
+            {!editing ? (
               <div className="col-span-2 space-y-1.5">
                 <Label>Temporary Password *</Label>
-                <Input type="password" value={form.password} onChange={e => set('password', e.target.value)} required={!editing} />
+                <Input type="password" value={form.password} onChange={e => set('password', e.target.value)} required />
+              </div>
+            ) : (
+              <div className="col-span-2 space-y-1.5">
+                <Label>New Password <span className="text-muted-foreground font-normal">(leave blank to keep current)</span></Label>
+                <Input type="password" value={form.newPassword} onChange={e => set('newPassword', e.target.value)} placeholder="Min. 6 characters" />
               </div>
             )}
           </div>
