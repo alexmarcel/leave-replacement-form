@@ -10,7 +10,7 @@ import { useAuth } from '@/context/auth'
 import { formatDateShort } from '@/lib/dates'
 import { format, addDays } from 'date-fns'
 import type { LeaveRequest } from '@/lib/types'
-import { Calendar, ChevronRight } from 'lucide-react-native'
+import { Calendar, CalendarPlus, ChevronRight, SquarePen } from 'lucide-react-native'
 
 type LeaveChipEntry = {
   id: string
@@ -144,7 +144,7 @@ export default function HomeScreen() {
                 <Text className="text-white font-semibold text-base">Request Leave Replacement</Text>
                 <Text className="text-emerald-200 text-xs mt-0.5">Tap to submit a new request</Text>
               </View>
-              <PlusCircle size={38} color="white" />
+              <CalendarPlus size={38} color="white" />
             </TouchableOpacity>
           </View>
         )}

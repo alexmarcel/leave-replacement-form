@@ -10,7 +10,7 @@ import { useAuth } from '@/context/auth'
 import { formatDate, formatDateWithDay } from '@/lib/dates'
 import type { LeaveRequest, LeaveAuditLog, LeaveStatus } from '@/lib/types'
 import { StatusBadge } from '@/components/StatusBadge'
-import { ChevronLeft, CheckCircle2, XCircle, Clock, FilePenLine, FileDown, ClockFading } from 'lucide-react-native'
+import { ChevronLeft, CheckCircle2, XCircle, Clock, FilePenLine, FileDown, ClockFading, CircleCheck, CircleCheckBig } from 'lucide-react-native'
 import { sendPushNotification } from '@/lib/notifications'
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
@@ -279,7 +279,7 @@ export default function RequestDetailScreen() {
         <!DOCTYPE html><html><head><meta charset="utf-8" />
         <style>
           @page { size: A4; margin: 0; }
-          body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 32px; font-size: 13px; width: 595px; box-sizing: border-box; }
+          body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 32px; font-size: 13px; width: 100%; box-sizing: border-box; }
           .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
           .header h1 { margin: 0 0 4px; font-size: 20px; color: #059669; }
           .header p { margin: 0; color: #6b7280; font-size: 12px; }
@@ -446,9 +446,9 @@ export default function RequestDetailScreen() {
             profile={request.replacement}
             extra={request.replacement_response ? `Response: ${request.replacement_response}${request.replacement_notes ? ` · "${request.replacement_notes}"` : ''}` : null}
             statusIcon={
-              request.replacement_response === 'agreed' ? <CheckCircle2 size={20} color="#16a34a" /> :
+              request.replacement_response === 'agreed' ? <CircleCheckBig size={20} color="#16a34a" /> :
               request.replacement_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
-              request.replacement_id ? <ClockFading size={20} color="#d97706" /> : null
+              request.replacement_id ? <ClockFading size={20} color="#55aefe" /> : null
             }
           />
           <PartyCard
@@ -456,9 +456,9 @@ export default function RequestDetailScreen() {
             profile={request.approver}
             extra={request.approver_response && request.approver_response !== 'pending' ? `Response: ${request.approver_response}${request.approver_notes ? ` · "${request.approver_notes}"` : ''}` : null}
             statusIcon={
-              request.approver_response === 'approved' ? <CheckCircle2 size={20} color="#16a34a" /> :
+              request.approver_response === 'approved' ? <CircleCheckBig size={20} color="#16a34a" /> :
               request.approver_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
-              request.approver_id ? <ClockFading size={20} color="#d97706" /> : null
+              request.approver_id ? <ClockFading size={20} color="#55aefe" /> : null
             }
           />
         </View>
