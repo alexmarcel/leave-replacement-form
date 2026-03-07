@@ -62,6 +62,8 @@ export default function RequestsScreen() {
   useFocusEffect(useCallback(() => { loadRequests() }, [loadRequests]))
   function onRefresh() { setRefreshing(true); loadRequests() }
 
+  if (!profile) return null
+
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}

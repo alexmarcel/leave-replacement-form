@@ -125,10 +125,9 @@ export default function ApplyReview() {
       }
     }
 
-    reset()
     setSubmitting(false)
     Alert.alert('Submitted!', 'Your leave request has been submitted.', [
-      { text: 'OK', onPress: () => router.replace('/(tabs)/requests') },
+      { text: 'OK', onPress: () => { router.replace('/(tabs)/requests'); reset() } },
     ])
   }
 
@@ -149,8 +148,8 @@ export default function ApplyReview() {
         <View className="bg-white rounded-2xl overflow-hidden border border-gray-100 mb-5">
           <Text className="px-4 pt-3 pb-1 text-sm font-semibold text-gray-700">Leave Summary</Text>
           <SummaryRow label="Type" value={state.leaveTypeName} />
-          <SummaryRow label="From" value={formatDateWithDay(state.startDate)} />
-          <SummaryRow label="To" value={formatDateWithDay(state.endDate)} />
+          <SummaryRow label="From" value={state.startDate ? formatDateWithDay(state.startDate) : '—'} />
+          <SummaryRow label="To" value={state.endDate ? formatDateWithDay(state.endDate) : '—'} />
           <SummaryRow label="Working Days" value={`${state.totalDays} day${state.totalDays !== 1 ? 's' : ''}`} />
           {state.reason ? <SummaryRow label="Reason" value={state.reason} /> : null}
           {state.replacementName ? <SummaryRow label="Replacement" value={state.replacementName} /> : null}

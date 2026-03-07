@@ -7,10 +7,10 @@ import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/auth'
-import { formatDate } from '@/lib/dates'
+import { formatDate, formatDateWithDay } from '@/lib/dates'
 import type { LeaveRequest, LeaveAuditLog, LeaveStatus } from '@/lib/types'
 import { StatusBadge } from '@/components/StatusBadge'
-import { ChevronLeft } from 'lucide-react-native'
+import { ChevronLeft, CheckCircle2, XCircle, Clock, Send } from 'lucide-react-native'
 import { sendPushNotification } from '@/lib/notifications'
 
 const FINAL: LeaveStatus[] = ['approved', 'rejected', 'cancelled']
@@ -23,6 +23,7 @@ export default function RequestDetailScreen() {
   const [request, setRequest] = useState<LeaveRequest | null>(null)
   const [auditLog, setAuditLog] = useState<LeaveAuditLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [showNotes, setShowNotes] = useState(false)
@@ -46,7 +47,12 @@ export default function RequestDetailScreen() {
         .eq('leave_request_id', id)
         .order('created_at', { ascending: true }),
     ])
-    setRequest(req as LeaveRequest)
+    if (!req) {
+      setFetchError('Request not found or you do not have access.')
+    } else {
+      setRequest(req as LeaveRequest)
+      setFetchError(null)
+    }
     setAuditLog((audit ?? []) as LeaveAuditLog[])
     setLoading(false)
   }, [id])
@@ -197,7 +203,21 @@ export default function RequestDetailScreen() {
     )
   }
 
-  if (!request) return null
+  if (fetchError || !request) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="bg-white px-4 py-3 flex-row items-center border-b border-gray-100">
+          <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+            <ChevronLeft size={22} color="#374151" />
+          </TouchableOpacity>
+          <Text className="text-lg font-bold text-gray-900 flex-1">Request Detail</Text>
+        </View>
+        <View className="flex-1 items-center justify-center px-8">
+          <Text className="text-gray-400 text-sm text-center">{fetchError ?? 'Request not found.'}</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -219,7 +239,8 @@ export default function RequestDetailScreen() {
               <Text className="text-gray-900 font-medium">{request.leave_type?.name}</Text>
             </View>
           </Row>
-          <Row label="Dates"><Text className="text-gray-900 font-medium">{formatDate(request.start_date)} → {formatDate(request.end_date)}</Text></Row>
+          <Row label="From"><Text className="text-gray-900 font-medium">{formatDateWithDay(request.start_date)}</Text></Row>
+          <Row label="To"><Text className="text-gray-900 font-medium">{formatDateWithDay(request.end_date)}</Text></Row>
           <Row label="Working Days"><Text className="text-gray-900 font-medium">{request.total_days} day{request.total_days !== 1 ? 's' : ''}</Text></Row>
           {request.reason ? <Row label="Reason"><Text className="text-gray-900 font-medium flex-shrink">{request.reason}</Text></Row> : null}
           <Row label="Submitted"><Text className="text-gray-500 text-sm">{new Date(request.created_at).toLocaleString()}</Text></Row>
@@ -227,16 +248,31 @@ export default function RequestDetailScreen() {
 
         {/* Three Parties */}
         <View className="mt-4 gap-3">
-          <PartyCard label="Staff A — Requester" profile={request.requester} extra={null} />
+          <PartyCard
+            label="Staff A — Requester"
+            profile={request.requester}
+            extra={null}
+            statusIcon={<Send size={18} color="#059669" />}
+          />
           <PartyCard
             label="Staff B — Replacement"
             profile={request.replacement}
             extra={request.replacement_response ? `Response: ${request.replacement_response}${request.replacement_notes ? ` · "${request.replacement_notes}"` : ''}` : null}
+            statusIcon={
+              request.replacement_response === 'agreed' ? <CheckCircle2 size={18} color="#16a34a" /> :
+              request.replacement_response === 'rejected' ? <XCircle size={18} color="#dc2626" /> :
+              request.replacement_id ? <Clock size={18} color="#d97706" /> : null
+            }
           />
           <PartyCard
             label="Staff C — Approver"
             profile={request.approver}
-            extra={request.approver_response ? `Response: ${request.approver_response}${request.approver_notes ? ` · "${request.approver_notes}"` : ''}` : null}
+            extra={request.approver_response && request.approver_response !== 'pending' ? `Response: ${request.approver_response}${request.approver_notes ? ` · "${request.approver_notes}"` : ''}` : null}
+            statusIcon={
+              request.approver_response === 'approved' ? <CheckCircle2 size={18} color="#16a34a" /> :
+              request.approver_response === 'rejected' ? <XCircle size={18} color="#dc2626" /> :
+              request.approver_id ? <Clock size={18} color="#d97706" /> : null
+            }
           />
         </View>
 
@@ -372,20 +408,25 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   )
 }
 
-function PartyCard({ label, profile, extra }: { label: string; profile: any; extra: string | null }) {
+function PartyCard({ label, profile, extra, statusIcon }: { label: string; profile: any; extra: string | null; statusIcon?: React.ReactNode }) {
   return (
     <View className="bg-white rounded-2xl px-4 py-3 border border-gray-100">
       <Text className="text-xs text-gray-400 mb-1">{label}</Text>
-      {profile ? (
-        <>
-          <Text className="text-gray-900 font-semibold">{profile.full_name}</Text>
-          {profile.jawatan ? <Text className="text-gray-500 text-xs">{profile.jawatan}</Text> : null}
-          {profile.department ? <Text className="text-gray-400 text-xs">{profile.department}</Text> : null}
-          {extra ? <Text className="text-gray-500 text-xs mt-1">{extra}</Text> : null}
-        </>
-      ) : (
-        <Text className="text-gray-400 text-sm">Not assigned</Text>
-      )}
+      <View className="flex-row items-start justify-between">
+        <View className="flex-1 mr-3">
+          {profile ? (
+            <>
+              <Text className="text-gray-900 font-semibold">{profile.full_name}</Text>
+              {profile.jawatan ? <Text className="text-gray-500 text-xs">{profile.jawatan}</Text> : null}
+              {profile.department ? <Text className="text-gray-400 text-xs">{profile.department}</Text> : null}
+              {extra ? <Text className="text-gray-500 text-xs mt-1">{extra}</Text> : null}
+            </>
+          ) : (
+            <Text className="text-gray-400 text-sm">Not assigned</Text>
+          )}
+        </View>
+        {statusIcon && <View className="mb-4">{statusIcon}</View>}
+      </View>
     </View>
   )
 }

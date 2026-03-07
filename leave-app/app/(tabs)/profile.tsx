@@ -65,11 +65,8 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-        {/* Avatar + name */}
+        {/* Name + role */}
         <View className="items-center mb-6">
-          <View className="w-20 h-20 rounded-full bg-emerald-100 items-center justify-center mb-3">
-            <Text className="text-3xl font-bold text-emerald-600">{profile.full_name.charAt(0).toUpperCase()}</Text>
-          </View>
           <Text className="text-xl font-bold text-gray-900">{profile.full_name}</Text>
           <View className={`mt-2 px-3 py-1 rounded-full ${roleBg[profile.role]}`}>
             <Text className={`text-xs font-medium ${roleText[profile.role]}`}>{roleLabel[profile.role]}</Text>

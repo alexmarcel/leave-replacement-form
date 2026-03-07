@@ -7,9 +7,19 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/auth'
-import { formatDate, formatDateShort } from '@/lib/dates'
+import { formatDateShort } from '@/lib/dates'
 import { format, addDays } from 'date-fns'
-import type { LeaveRequest, LeaveScheduleEntry } from '@/lib/types'
+import type { LeaveRequest } from '@/lib/types'
+
+type LeaveChipEntry = {
+  id: string
+  start_date: string
+  end_date: string
+  total_days: number
+  requester: { full_name: string; department: string | null }
+  replacement: { full_name: string } | null
+  leave_type: { name: string; color_hex: string }
+}
 import { StatusBadge } from '@/components/StatusBadge'
 import { PlusCircle } from 'lucide-react-native'
 
@@ -21,8 +31,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [pendingActions, setPendingActions] = useState<LeaveRequest[]>([])
   const [replacingFor, setReplacingFor] = useState<LeaveRequest[]>([])
-  const [onLeaveToday, setOnLeaveToday] = useState<LeaveScheduleEntry[]>([])
-  const [upcoming, setUpcoming] = useState<LeaveScheduleEntry[]>([])
+  const [onLeaveToday, setOnLeaveToday] = useState<LeaveChipEntry[]>([])
+  const [upcoming, setUpcoming] = useState<LeaveChipEntry[]>([])
 
   const loadData = useCallback(async () => {
     if (!profile) return
@@ -62,15 +72,27 @@ export default function HomeScreen() {
 
       // On leave today
       supabase
-        .from('leave_schedule')
-        .select('*')
+        .from('leave_requests')
+        .select(`
+          id, start_date, end_date, total_days,
+          requester:profiles!requester_id(full_name, department),
+          replacement:profiles!replacement_id(full_name),
+          leave_type:leave_types!leave_type_id(name, color_hex)
+        `)
+        .eq('status', 'approved')
         .lte('start_date', today)
         .gte('end_date', today),
 
       // Upcoming in next 14 days (excluding today)
       supabase
-        .from('leave_schedule')
-        .select('*')
+        .from('leave_requests')
+        .select(`
+          id, start_date, end_date, total_days,
+          requester:profiles!requester_id(full_name, department),
+          replacement:profiles!replacement_id(full_name),
+          leave_type:leave_types!leave_type_id(name, color_hex)
+        `)
+        .eq('status', 'approved')
         .gt('start_date', today)
         .lte('start_date', twoWeeksLater)
         .order('start_date', { ascending: true }),
@@ -78,8 +100,8 @@ export default function HomeScreen() {
 
     setPendingActions((pendingRes.data ?? []) as unknown as LeaveRequest[])
     setReplacingFor((replacingRes.data ?? []) as unknown as LeaveRequest[])
-    setOnLeaveToday((todayRes.data ?? []) as LeaveScheduleEntry[])
-    setUpcoming((upcomingRes.data ?? []) as LeaveScheduleEntry[])
+    setOnLeaveToday((todayRes.data ?? []) as unknown as LeaveChipEntry[])
+    setUpcoming((upcomingRes.data ?? []) as unknown as LeaveChipEntry[])
     setLoading(false)
     setRefreshing(false)
   }, [profile])
@@ -88,7 +110,7 @@ export default function HomeScreen() {
 
   function onRefresh() { setRefreshing(true); loadData() }
 
-  if (loading) {
+  if (loading || !profile) {
     return (
       <SafeAreaView className="flex-1 bg-white items-center justify-center">
         <ActivityIndicator size="large" color="#059669" />
@@ -160,20 +182,20 @@ export default function HomeScreen() {
         )}
 
         {/* On Leave Today */}
-        <Section title={`On Leave Today (${onLeaveToday.length})`} accent="bg-red-500">
+        <Section title={`On Leave Today (${onLeaveToday.length})`} accent="bg-green-500">
           {onLeaveToday.length === 0 ? (
-            <Text className="text-gray-400 text-sm px-4 pb-3">No staff on leave today.</Text>
+            <Text className="text-gray-400 text-sm px-4 pb-3 pt-3">No staff on leave today.</Text>
           ) : onLeaveToday.map(e => (
-            <LeaveChip key={e.leave_request_id} entry={e} showDate={false} />
+            <LeaveChip key={e.id} entry={e} />
           ))}
         </Section>
 
         {/* Upcoming Leaves */}
         <Section title="Upcoming Leaves (Next 14 Days)" accent="bg-blue-500">
           {upcoming.length === 0 ? (
-            <Text className="text-gray-400 text-sm px-4 pb-3">No upcoming leaves in the next 14 days.</Text>
+            <Text className="text-gray-400 text-sm px-4 pb-3 pt-3">No upcoming leaves in the next 14 days.</Text>
           ) : upcoming.map(e => (
-            <LeaveChip key={e.leave_request_id} entry={e} showDate />
+            <LeaveChip key={e.id} entry={e} />
           ))}
         </Section>
       </ScrollView>
@@ -217,7 +239,7 @@ function ActionCard({ request, myId, onPress }: { request: LeaveRequest; myId: s
           <Text className="text-xs text-amber-600 font-medium mb-0.5">{label}</Text>
           <Text className="text-gray-900 font-semibold">{person?.full_name ?? '—'}</Text>
           <Text className="text-gray-500 text-xs mt-0.5">
-            {request.leave_type?.name} · {formatDateShort(request.start_date)} → {formatDateShort(request.end_date)} ({request.total_days}d)
+            {request.leave_type?.name} · {formatDateShort(request.start_date)} - {formatDateShort(request.end_date)} ({request.total_days}d)
           </Text>
         </View>
         <StatusBadge status={request.status} />
@@ -226,23 +248,31 @@ function ActionCard({ request, myId, onPress }: { request: LeaveRequest; myId: s
   )
 }
 
-function LeaveChip({ entry, showDate }: { entry: LeaveScheduleEntry; showDate: boolean }) {
+function LeaveChip({ entry }: { entry: LeaveChipEntry }) {
+  const lt = entry.leave_type as any
+  const color = lt?.color_hex ?? '#059669'
   return (
-    <View className="px-4 py-3 flex-row items-center justify-between border-b border-gray-50 last:border-b-0">
-      <View className="flex-row items-center gap-3 flex-1">
-        <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color_hex }} />
-        <View className="flex-1">
-          <Text className="text-gray-900 font-medium text-sm">{entry.full_name}</Text>
-          <Text className="text-gray-400 text-xs">{entry.department ?? ''}</Text>
+    <View className="px-4 py-3 border-b border-gray-50 last:border-b-0">
+      <View className="flex-row items-start justify-between">
+        <View className="flex-row items-center gap-3 flex-1 mr-3">
+          <View className="w-3.5 h-3.5 rounded-full mt-1" style={{ backgroundColor: color }} />
+          <View className="flex-1">
+            <Text className="text-gray-900 font-medium text-sm justify-center">{(entry.requester as any)?.full_name}</Text>
+            {(entry.requester as any)?.department
+              ? <Text className="text-gray-400 text-xs">{(entry.requester as any).department}</Text>
+              : null}
+            {(entry.replacement as any)?.full_name
+              ? <Text className="text-gray-400 text-xs mt-0.5">Replacement : {(entry.replacement as any).full_name}</Text>
+              : null}
+          </View>
         </View>
-      </View>
-      <View className="items-end">
-        <Text className="text-xs font-medium" style={{ color: entry.color_hex }}>{entry.leave_type}</Text>
-        {showDate && (
+        <View className="items-end">
+          <Text className="text-xs font-medium" style={{ color }}>{lt?.name}</Text>
           <Text className="text-gray-400 text-xs mt-0.5">
-            {formatDateShort(entry.start_date)}{entry.start_date !== entry.end_date ? ` → ${formatDateShort(entry.end_date)}` : ''}
+            {formatDateShort(entry.start_date)}{entry.start_date !== entry.end_date ? ` to ${formatDateShort(entry.end_date)}` : ''}
           </Text>
-        )}
+          <Text className="text-gray-400 text-xs">{entry.total_days} day{entry.total_days !== 1 ? 's' : ''}</Text>
+        </View>
       </View>
     </View>
   )
