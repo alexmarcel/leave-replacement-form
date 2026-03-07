@@ -16,6 +16,7 @@ interface Candidate {
   department: string | null
   jawatan: string | null
   email: string
+  available: boolean
 }
 
 interface Section {
@@ -36,7 +37,11 @@ function groupByDepartment(candidates: Candidate[]): Section[] {
       if (b === 'No Department') return -1
       return a.localeCompare(b)
     })
-    .map(([title, data]) => ({ title, data }))
+    .map(([title, data]) => ({
+      title,
+      // available first, then unavailable
+      data: [...data.filter(c => c.available), ...data.filter(c => !c.available)],
+    }))
 }
 
 export default function ApplyStep2Replacement() {
@@ -55,13 +60,25 @@ export default function ApplyStep2Replacement() {
       return
     }
     async function load() {
-      const { data, error: rpcError } = await supabase.rpc('get_available_replacements', {
-        p_start_date: state.startDate,
-        p_end_date: state.endDate,
-        p_requester_id: profile!.id,
-      })
-      if (rpcError) setError(rpcError.message)
-      setCandidates(data ?? [])
+      const [{ data: availableData, error: rpcError }, { data: allStaff }] = await Promise.all([
+        supabase.rpc('get_available_replacements', {
+          p_start_date: state.startDate,
+          p_end_date: state.endDate,
+          p_requester_id: profile!.id,
+        }),
+        supabase
+          .from('profiles')
+          .select('id, full_name, department, jawatan, email')
+          .eq('is_active', true)
+          .in('role', ['staff', 'approver'])
+          .neq('id', profile!.id)
+          .order('full_name'),
+      ])
+      if (rpcError) { setError(rpcError.message); setLoading(false); return }
+      const availableIds = new Set((availableData ?? []).map((c: any) => c.id))
+      setCandidates(
+        (allStaff ?? []).map(p => ({ ...p, available: availableIds.has(p.id) }))
+      )
       setLoading(false)
     }
     load()
@@ -74,10 +91,11 @@ export default function ApplyStep2Replacement() {
   )
 
   const sections = groupByDepartment(filtered)
+  const hasSelection = !!state.replacementId
 
   function select(c: Candidate) {
+    if (!c.available) return
     set({ replacementId: c.id, replacementName: c.full_name })
-    router.push('/apply/review')
   }
 
   return (
@@ -117,20 +135,16 @@ export default function ApplyStep2Replacement() {
         <SectionList
           sections={sections}
           keyExtractor={c => c.id}
-          contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 20, paddingBottom: 120 }}
           stickySectionHeadersEnabled={false}
           ListEmptyComponent={
             <View className="items-center py-16">
-              <Text className="text-gray-400 text-sm">No available replacements found.</Text>
-              <Text className="text-gray-400 text-xs mt-1">
-                {candidates.length === 0
-                  ? 'No staff accounts exist yet. Ask an admin to create staff accounts.'
-                  : 'All eligible staff may already be on leave during this period.'}
-              </Text>
+              <Text className="text-gray-400 text-sm">No staff found.</Text>
+              <Text className="text-gray-400 text-xs mt-1">No staff accounts exist yet. Ask an admin to create staff accounts.</Text>
             </View>
           }
           renderSectionHeader={({ section }) => (
-            <View className="mt-4 mb-2 first:mt-5">
+            <View className="mt-4 mb-2">
               <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 {section.title}
               </Text>
@@ -139,6 +153,17 @@ export default function ApplyStep2Replacement() {
           ItemSeparatorComponent={() => <View className="h-2" />}
           renderItem={({ item: c }) => {
             const selected = state.replacementId === c.id
+            if (!c.available) {
+              return (
+                <View className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex-row items-center opacity-60">
+                  <View className="flex-1">
+                    <Text className="font-semibold text-gray-400">{c.full_name}</Text>
+                    {c.jawatan ? <Text className="text-gray-400 text-sm">{c.jawatan}</Text> : null}
+                    <Text className="text-xs text-orange-400 mt-1">Already replacing someone else</Text>
+                  </View>
+                </View>
+              )
+            }
             return (
               <TouchableOpacity
                 className={`bg-white rounded-2xl px-4 py-4 border flex-row items-center ${selected ? 'border-emerald-600' : 'border-gray-100'}`}
@@ -157,6 +182,21 @@ export default function ApplyStep2Replacement() {
             )
           }}
         />
+      )}
+
+      {/* Continue button */}
+      {!loading && !error && (
+        <View className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-3 bg-gray-50 border-t border-gray-100">
+          <TouchableOpacity
+            className={`rounded-2xl py-4 items-center ${hasSelection ? 'bg-emerald-600' : 'bg-gray-200'}`}
+            onPress={() => { if (hasSelection) router.push('/apply/review') }}
+            disabled={!hasSelection}
+          >
+            <Text className={`font-semibold text-base ${hasSelection ? 'text-white' : 'text-gray-400'}`}>
+              {hasSelection ? 'Continue to Review' : 'Select a Replacement'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
     </SafeAreaView>
   )

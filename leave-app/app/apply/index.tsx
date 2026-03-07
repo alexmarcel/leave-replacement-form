@@ -209,7 +209,7 @@ export default function ApplyStep1() {
           onPress={handleNext}
         >
           <Text className="text-white font-semibold text-base">
-            {state.requiresReplacement ? 'Next: Pick Replacement →' : 'Next: Review →'}
+            {state.requiresReplacement ? 'Pick Replacement' : 'Next: Review →'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

@@ -23,7 +23,7 @@ type ScheduleEntry = {
 }
 
 export default function ScheduleScreen() {
-  const [mode, setMode] = useState<ViewMode>('week')
+  const [mode, setMode] = useState<ViewMode>('month')
   const [anchor, setAnchor] = useState(new Date())
   const [entries, setEntries] = useState<ScheduleEntry[]>([])
   const [loading, setLoading] = useState(true)

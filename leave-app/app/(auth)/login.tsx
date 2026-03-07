@@ -42,7 +42,7 @@ export default function LoginScreen() {
           {/* Form */}
           <View className="space-y-4">
             <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1.5">Email</Text>
+              <Text className="text-sm font-medium text-gray-700 mb-1.5 mt-4">Email</Text>
               <TextInput
                 className="border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-50"
                 placeholder="you@example.com"
@@ -55,9 +55,9 @@ export default function LoginScreen() {
               />
             </View>
             <View>
-              <Text className="text-sm font-medium text-gray-700 mb-1.5">Password</Text>
+              <Text className="text-sm font-medium text-gray-700 mb-1.5 mt-4">Password</Text>
               <TextInput
-                className="border border-gray-300 rounded-xl px-4 py-3 text-gray-900 bg-gray-50"
+                className="border border-gray-300 rounded-xl px-4 py-3 mb-4 text-gray-900 bg-gray-50"
                 placeholder="••••••••"
                 placeholderTextColor="#9ca3af"
                 value={password}
@@ -82,6 +82,26 @@ export default function LoginScreen() {
                 : <Text className="text-white font-semibold text-base">Sign In</Text>
               }
             </TouchableOpacity>
+            
+            <View className="flex-1 bg-gray-900 p-6">
+  
+            {/* TOP CONTENT: Your header, forms, or buttons go here */}
+            <View>
+              <Text className="text-white text-2xl"></Text>
+            </View>
+
+            {/* FOOTER: mt-auto pushes this entire block to the bottom */}
+            <View className="mt-auto pb-4">
+              <Text className="text-sm text-gray-200 mb-1 text-left">
+                Sistem Automasi Mohon Staf Izin Ambil Holiday (SAMSIAH)
+              </Text>
+              <Text className="text-sm text-gray-200 text-left">
+                © 2026 ILKKM Tawau
+              </Text>
+            </View>
+  
+</View>
+
           </View>
         </View>
       </ScrollView>

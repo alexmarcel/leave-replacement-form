@@ -136,7 +136,7 @@ export default function HomeScreen() {
         {(profile?.role === 'staff' || profile?.role === 'approver' || profile?.role === 'admin') && (
           <View className="px-5 pt-4">
             <TouchableOpacity
-              className="bg-emerald-600 rounded-2xl px-5 py-4 flex-row items-center justify-between"
+              className="bg-emerald-600 rounded-2xl px-5 py-6 flex-row items-center justify-between"
               onPress={() => router.push('/apply')}
             >
               <View>
@@ -146,6 +146,15 @@ export default function HomeScreen() {
               <PlusCircle size={38} color="white" />
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* Pending Actions */}
+        {pendingActions.length > 0 && (
+          <Section title="Action Required" accent="bg-amber-500">
+            {pendingActions.map(r => (
+              <ActionCard key={r.id} request={r} myId={profile!.id} onPress={() => router.push(`/request/${r.id}`)} />
+            ))}
+          </Section>
         )}
 
         {/* Covering For */}
@@ -162,21 +171,12 @@ export default function HomeScreen() {
                     <Text className="text-xs text-emerald-700 font-medium mb-0.5">Replacement for</Text>
                     <Text className="text-gray-900 font-semibold">{(r.requester as any)?.full_name ?? '—'}</Text>
                     <Text className="text-gray-500 text-xs mt-0.5">
-                      {(r.leave_type as any)?.name} · {formatDateShort(r.start_date)} → {formatDateShort(r.end_date)} ({r.total_days}d)
+                      {(r.leave_type as any)?.name} · {formatDateShort(r.start_date)} - {formatDateShort(r.end_date)} ({r.total_days}d)
                     </Text>
                   </View>
                   <StatusBadge status={r.status} />
                 </View>
               </TouchableOpacity>
-            ))}
-          </Section>
-        )}
-
-        {/* Pending Actions */}
-        {pendingActions.length > 0 && (
-          <Section title="Action Required" accent="bg-amber-500">
-            {pendingActions.map(r => (
-              <ActionCard key={r.id} request={r} myId={profile!.id} onPress={() => router.push(`/request/${r.id}`)} />
             ))}
           </Section>
         )}

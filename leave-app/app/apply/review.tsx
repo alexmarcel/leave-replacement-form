@@ -10,7 +10,7 @@ import { useApply } from '@/context/apply'
 import { useAuth } from '@/context/auth'
 import { formatDate, formatDateWithDay } from '@/lib/dates'
 import { sendPushNotification } from '@/lib/notifications'
-import { ChevronLeft, Check } from 'lucide-react-native'
+import { ChevronLeft, Check, AlertTriangle } from 'lucide-react-native'
 
 interface Approver {
   id: string
@@ -18,6 +18,13 @@ interface Approver {
   jawatan: string | null
   department: string | null
   expo_push_token: string | null
+}
+
+interface ConflictRequest {
+  id: string
+  start_date: string
+  end_date: string
+  requester: { full_name: string } | null
 }
 
 export default function ApplyReview() {
@@ -28,17 +35,35 @@ export default function ApplyReview() {
   const [approvers, setApprovers] = useState<Approver[]>([])
   const [loadingApprovers, setLoadingApprovers] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [conflicts, setConflicts] = useState<ConflictRequest[]>([])
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from('profiles')
-        .select('id, full_name, jawatan, department, expo_push_token')
-        .eq('role', 'approver')
-        .eq('is_active', true)
-        .neq('id', profile!.id)
-        .order('full_name')
-      setApprovers((data ?? []) as Approver[])
+      const [{ data: approverData }, { data: settingsData }, { data: conflictData }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, jawatan, department, expo_push_token')
+          .eq('role', 'approver')
+          .eq('is_active', true)
+          .neq('id', profile!.id)
+          .order('full_name'),
+        supabase
+          .from('system_settings')
+          .select('allow_multiple_replacements')
+          .limit(1)
+          .single(),
+        supabase
+          .from('leave_requests')
+          .select('id, start_date, end_date, requester:profiles!requester_id(full_name)')
+          .eq('replacement_id', profile!.id)
+          .in('status', ['pending_approval', 'approved'])
+          .lte('start_date', state.endDate)
+          .gte('end_date', state.startDate),
+      ])
+      setApprovers((approverData ?? []) as Approver[])
+      // Only enforce conflict check in One-to-One mode
+      const oneToOne = !(settingsData?.allow_multiple_replacements ?? false)
+      setConflicts(oneToOne ? (conflictData ?? []) as unknown as ConflictRequest[] : [])
       setLoadingApprovers(false)
     }
     load()
@@ -144,6 +169,27 @@ export default function ApplyReview() {
       </View>
 
       <ScrollView className="flex-1 px-5 py-5" contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Conflict warning */}
+        {conflicts.length > 0 && (
+          <View className="bg-red-50 border border-red-200 rounded-2xl px-4 py-4 mb-5 flex-row gap-3">
+            <AlertTriangle size={18} color="#dc2626" style={{ marginTop: 1, flexShrink: 0 }} />
+            <View className="flex-1">
+              <Text className="text-red-800 font-semibold text-sm mb-1">Replacement Conflict</Text>
+              <Text className="text-red-700 text-xs leading-5">
+                You are already committed as a replacement during this period:
+              </Text>
+              {conflicts.map(c => (
+                <Text key={c.id} className="text-red-700 text-xs font-medium mt-1">
+                  · {(c.requester as any)?.full_name ?? '—'} ({formatDate(c.start_date)} – {formatDate(c.end_date)})
+                </Text>
+              ))}
+              <Text className="text-red-600 text-xs mt-2">
+                You cannot submit a leave request while you are a replacement for someone else on overlapping dates.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Summary */}
         <View className="bg-white rounded-2xl overflow-hidden border border-gray-100 mb-5">
           <Text className="px-4 pt-3 pb-1 text-sm font-semibold text-gray-700">Leave Summary</Text>
@@ -180,7 +226,6 @@ export default function ApplyReview() {
                     <View className="flex-1">
                       <Text className="font-semibold text-gray-900">{a.full_name}</Text>
                       {a.jawatan ? <Text className="text-gray-500 text-sm">{a.jawatan}</Text> : null}
-                      {a.department ? <Text className="text-gray-400 text-xs">{a.department}</Text> : null}
                     </View>
                     {selected && (
                       <View className="w-6 h-6 bg-emerald-600 rounded-full items-center justify-center">
@@ -195,9 +240,9 @@ export default function ApplyReview() {
         </View>
 
         <TouchableOpacity
-          className={`rounded-xl py-4 items-center ${submitting || approvers.length === 0 ? 'bg-emerald-300' : 'bg-emerald-600'}`}
+          className={`rounded-xl py-4 items-center ${submitting || approvers.length === 0 || conflicts.length > 0 ? 'bg-gray-100' : 'bg-emerald-600'}`}
           onPress={handleSubmit}
-          disabled={submitting || approvers.length === 0}
+          disabled={submitting || approvers.length === 0 || conflicts.length > 0}
         >
           {submitting
             ? <ActivityIndicator color="white" />

@@ -10,8 +10,10 @@ import { useAuth } from '@/context/auth'
 import { formatDate, formatDateWithDay } from '@/lib/dates'
 import type { LeaveRequest, LeaveAuditLog, LeaveStatus } from '@/lib/types'
 import { StatusBadge } from '@/components/StatusBadge'
-import { ChevronLeft, CheckCircle2, XCircle, Clock, FilePenLine } from 'lucide-react-native'
+import { ChevronLeft, CheckCircle2, XCircle, Clock, FilePenLine, FileDown, ClockFading } from 'lucide-react-native'
 import { sendPushNotification } from '@/lib/notifications'
+import * as Print from 'expo-print'
+import * as Sharing from 'expo-sharing'
 
 const FINAL: LeaveStatus[] = ['approved', 'rejected', 'cancelled']
 
@@ -27,6 +29,7 @@ export default function RequestDetailScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [showNotes, setShowNotes] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   useEffect(() => {
     if (from !== 'requests') return
@@ -229,6 +232,126 @@ export default function RequestDetailScreen() {
     )
   }
 
+  async function handleGeneratePdf() {
+    if (!request) return
+    setPdfLoading(true)
+    try {
+      const r = request as any
+      const leaveType = r.leave_type
+      const requester = r.requester
+      const replacement = r.replacement
+      const approver = r.approver
+
+      const statusColors: Record<string, string> = {
+        approved: '#16a34a', rejected: '#dc2626', cancelled: '#6b7280',
+        pending_approval: '#d97706', pending_replacement: '#2563eb',
+        replacement_rejected: '#dc2626', draft: '#9ca3af',
+      }
+      const statusColor = statusColors[request.status] ?? '#6b7280'
+
+      const row = (label: string, value: string) =>
+        `<tr><td class="label">${label}</td><td class="value">${value}</td></tr>`
+
+      const partySection = (title: string, p: any, extra?: string) => {
+        if (!p) return `<div class="section"><h3>${title}</h3><p class="muted">Not assigned</p></div>`
+        return `
+          <div class="section">
+            <h3>${title}</h3>
+            <table>${[
+              row('Name', p.full_name ?? '—'),
+              p.jawatan ? row('Position', p.jawatan) : '',
+              p.department ? row('Department', p.department) : '',
+              p.email ? row('Email', p.email) : '',
+              p.phone ? row('Phone', p.phone) : '',
+              extra ? row('Response', extra) : '',
+            ].join('')}</table>
+          </div>`
+      }
+
+      const replacementExtra = r.replacement_response
+        ? `${r.replacement_response}${r.replacement_notes ? ` — "${r.replacement_notes}"` : ''}`
+        : undefined
+      const approverExtra = r.approver_response && r.approver_response !== 'pending'
+        ? `${r.approver_response}${r.approver_notes ? ` — "${r.approver_notes}"` : ''}`
+        : undefined
+
+      const html = `
+        <!DOCTYPE html><html><head><meta charset="utf-8" />
+        <style>
+          @page { size: A4; margin: 0; }
+          body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #111827; margin: 0; padding: 32px; font-size: 13px; width: 595px; box-sizing: border-box; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 16px; margin-bottom: 24px; }
+          .header h1 { margin: 0 0 4px; font-size: 20px; color: #059669; }
+          .header p { margin: 0; color: #6b7280; font-size: 12px; }
+          .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 600; background: ${statusColor}; }
+          .section { margin-bottom: 20px; }
+          .section h3 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; margin: 0 0 8px; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 6px 0; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+          td.label { color: #6b7280; width: 130px; }
+          td.value { color: #111827; font-weight: 500; }
+          .muted { color: #9ca3af; font-size: 12px; margin: 0; }
+          .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${leaveType?.color_hex ?? '#059669'}; margin-right: 6px; vertical-align: middle; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+          .footer { margin-top: 32px; border-top: 1px solid #e5e7eb; padding-top: 12px; color: #9ca3af; font-size: 11px; }
+        </style></head><body>
+        <div class="header">
+          <div>
+            <h1>Leave Request</h1>
+            <p>Generated ${new Date().toLocaleString()}</p>
+          </div>
+          <span class="badge">${request.status.replace(/_/g, ' ').toUpperCase()}</span>
+        </div>
+
+        <div class="section">
+          <h3>Leave Details</h3>
+          <table>${[
+            row('Type', `<span class="dot"></span>${leaveType?.name ?? '—'}`),
+            row('From', formatDateWithDay(request.start_date)),
+            row('To', formatDateWithDay(request.end_date)),
+            row('Working Days', `${request.total_days} day${request.total_days !== 1 ? 's' : ''}`),
+            request.reason ? row('Reason', request.reason) : '',
+            row('Submitted', new Date(request.created_at).toLocaleString()),
+          ].join('')}</table>
+        </div>
+
+        <div class="grid">
+          ${partySection('Staff A — Requester', requester)}
+          ${partySection('Staff B — Replacement', replacement, replacementExtra)}
+        </div>
+        ${partySection('Staff C — Approver', approver, approverExtra)}
+
+        ${auditLog.length > 0 ? `
+        <div class="section">
+          <h3>Timeline</h3>
+          <table>${auditLog.map((entry) => `
+            <tr>
+              <td class="label" style="color:#6b7280;font-size:11px;padding:7px 0;border-bottom:1px solid #f3f4f6;">
+                ${new Date(entry.created_at).toLocaleString()}
+              </td>
+              <td class="value" style="padding:7px 0;border-bottom:1px solid #f3f4f6;">
+                <span style="font-weight:600;">
+                  ${entry.old_status ? `${entry.old_status.replace(/_/g, ' ')} → ` : ''}${entry.new_status.replace(/_/g, ' ')}
+                </span>
+                <span style="color:#6b7280;font-weight:400;"> · ${(entry.changer as any)?.full_name ?? 'System'}</span>
+                ${entry.notes ? `<br/><span style="color:#6b7280;font-style:italic;font-size:11px;">"${entry.notes}"</span>` : ''}
+              </td>
+            </tr>`).join('')}
+          </table>
+        </div>` : ''}
+
+        <div class="footer">This document is generated from the Leave Management System and is for reference only.</div>
+        </body></html>`
+
+      const { uri } = await Print.printToFileAsync({ html, base64: false, width: 595, height: 842 })
+      await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Leave Request PDF' })
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Could not generate PDF.')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   async function handleCancel() {
     Alert.alert('Cancel Request', 'Are you sure you want to cancel this leave request?', [
       { text: 'No', style: 'cancel' },
@@ -325,7 +448,7 @@ export default function RequestDetailScreen() {
             statusIcon={
               request.replacement_response === 'agreed' ? <CheckCircle2 size={20} color="#16a34a" /> :
               request.replacement_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
-              request.replacement_id ? <Clock size={20} color="#d97706" /> : null
+              request.replacement_id ? <ClockFading size={20} color="#d97706" /> : null
             }
           />
           <PartyCard
@@ -335,7 +458,7 @@ export default function RequestDetailScreen() {
             statusIcon={
               request.approver_response === 'approved' ? <CheckCircle2 size={20} color="#16a34a" /> :
               request.approver_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
-              request.approver_id ? <Clock size={20} color="#d97706" /> : null
+              request.approver_id ? <ClockFading size={20} color="#d97706" /> : null
             }
           />
         </View>
@@ -447,6 +570,21 @@ export default function RequestDetailScreen() {
             )}
           </View>
         )}
+
+        {/* Share PDF */}
+        <TouchableOpacity
+          className="mt-5 bg-white rounded-2xl px-4 py-3.5 border border-gray-100 flex-row items-center justify-center gap-2"
+          onPress={handleGeneratePdf}
+          disabled={pdfLoading}
+        >
+          {pdfLoading
+            ? <ActivityIndicator size="small" color="#059669" />
+            : <>
+                <FileDown size={18} color="#059669" />
+                <Text className="text-emerald-700 font-semibold text-sm">Share as PDF</Text>
+              </>
+          }
+        </TouchableOpacity>
 
         {/* Audit Timeline */}
         <View className="mt-5">
