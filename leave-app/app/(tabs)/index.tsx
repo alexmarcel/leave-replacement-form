@@ -126,14 +126,14 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
       >
         {/* Header */}
-        <View className="bg-white px-5 pt-4 pb-5 border-b border-gray-100">
+        <View className="bg-white px-5 pt-5 pb-5 border-b border-gray-100">
           <Text className="text-gray-500 text-sm">Good {greeting()},</Text>
           <Text className="text-2xl font-bold text-gray-900">{profile?.full_name}</Text>
           <Text className="text-gray-400 text-xs mt-0.5">{profile?.jawatan}{profile?.department ? ` · ${profile.department}` : ''}</Text>
         </View>
 
         {/* Apply Leave CTA */}
-        {(profile?.role === 'staff' || profile?.role === 'approver') && (
+        {(profile?.role === 'staff' || profile?.role === 'approver' || profile?.role === 'admin') && (
           <View className="px-5 pt-4">
             <TouchableOpacity
               className="bg-emerald-600 rounded-2xl px-5 py-4 flex-row items-center justify-between"
@@ -143,7 +143,7 @@ export default function HomeScreen() {
                 <Text className="text-white font-semibold text-base">Apply for Leave</Text>
                 <Text className="text-emerald-200 text-xs mt-0.5">Tap to submit a new request</Text>
               </View>
-              <PlusCircle size={28} color="white" />
+              <PlusCircle size={38} color="white" />
             </TouchableOpacity>
           </View>
         )}

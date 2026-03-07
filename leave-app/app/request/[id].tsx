@@ -10,7 +10,7 @@ import { useAuth } from '@/context/auth'
 import { formatDate, formatDateWithDay } from '@/lib/dates'
 import type { LeaveRequest, LeaveAuditLog, LeaveStatus } from '@/lib/types'
 import { StatusBadge } from '@/components/StatusBadge'
-import { ChevronLeft, CheckCircle2, XCircle, Clock, Send } from 'lucide-react-native'
+import { ChevronLeft, CheckCircle2, XCircle, Clock, FilePenLine } from 'lucide-react-native'
 import { sendPushNotification } from '@/lib/notifications'
 
 const FINAL: LeaveStatus[] = ['approved', 'rejected', 'cancelled']
@@ -252,16 +252,16 @@ export default function RequestDetailScreen() {
             label="Staff A — Requester"
             profile={request.requester}
             extra={null}
-            statusIcon={<Send size={18} color="#059669" />}
+            statusIcon={<FilePenLine size={20} color="#059669" />}
           />
           <PartyCard
             label="Staff B — Replacement"
             profile={request.replacement}
             extra={request.replacement_response ? `Response: ${request.replacement_response}${request.replacement_notes ? ` · "${request.replacement_notes}"` : ''}` : null}
             statusIcon={
-              request.replacement_response === 'agreed' ? <CheckCircle2 size={18} color="#16a34a" /> :
-              request.replacement_response === 'rejected' ? <XCircle size={18} color="#dc2626" /> :
-              request.replacement_id ? <Clock size={18} color="#d97706" /> : null
+              request.replacement_response === 'agreed' ? <CheckCircle2 size={20} color="#16a34a" /> :
+              request.replacement_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
+              request.replacement_id ? <Clock size={20} color="#d97706" /> : null
             }
           />
           <PartyCard
@@ -269,9 +269,9 @@ export default function RequestDetailScreen() {
             profile={request.approver}
             extra={request.approver_response && request.approver_response !== 'pending' ? `Response: ${request.approver_response}${request.approver_notes ? ` · "${request.approver_notes}"` : ''}` : null}
             statusIcon={
-              request.approver_response === 'approved' ? <CheckCircle2 size={18} color="#16a34a" /> :
-              request.approver_response === 'rejected' ? <XCircle size={18} color="#dc2626" /> :
-              request.approver_id ? <Clock size={18} color="#d97706" /> : null
+              request.approver_response === 'approved' ? <CheckCircle2 size={20} color="#16a34a" /> :
+              request.approver_response === 'rejected' ? <XCircle size={20} color="#dc2626" /> :
+              request.approver_id ? <Clock size={20} color="#d97706" /> : null
             }
           />
         </View>
@@ -345,6 +345,17 @@ export default function RequestDetailScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+            )}
+
+            {/* Staff A — pick new replacement after rejection */}
+            {isRequester && request.status === 'replacement_rejected' && (
+              <TouchableOpacity
+                className="bg-emerald-600 rounded-xl py-3 items-center mb-2"
+                onPress={() => router.push(`/request/pick-replacement?id=${id}`)}
+                disabled={!!actionLoading}
+              >
+                <Text className="text-white font-semibold">Pick New Replacement</Text>
+              </TouchableOpacity>
             )}
 
             {/* Staff A cancel */}
@@ -425,7 +436,7 @@ function PartyCard({ label, profile, extra, statusIcon }: { label: string; profi
             <Text className="text-gray-400 text-sm">Not assigned</Text>
           )}
         </View>
-        {statusIcon && <View className="mb-4">{statusIcon}</View>}
+        {statusIcon && <View className="justify-center">{statusIcon}</View>}
       </View>
     </View>
   )

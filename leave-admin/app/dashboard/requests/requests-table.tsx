@@ -69,7 +69,8 @@ export function RequestsTable({ requests, statusTabs, activeStatus }: Props) {
             <TableRow>
               <TableHead>Requester</TableHead>
               <TableHead>Leave Type</TableHead>
-              <TableHead>Dates</TableHead>
+              <TableHead>From</TableHead>
+              <TableHead>To</TableHead>
               <TableHead>Days</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
@@ -79,7 +80,7 @@ export function RequestsTable({ requests, statusTabs, activeStatus }: Props) {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-10">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-10">
                   No requests found.
                 </TableCell>
               </TableRow>
@@ -97,12 +98,15 @@ export function RequestsTable({ requests, statusTabs, activeStatus }: Props) {
                   {r.leave_type?.name ?? '—'}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {r.start_date} → {r.end_date}
+                  {new Date(r.start_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}
                 </TableCell>
-                <TableCell className="text-sm">{r.total_days}d</TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {new Date(r.end_date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}
+                </TableCell>
+                <TableCell className="text-sm">{r.total_days}</TableCell>
                 <TableCell><StatusBadge status={r.status} /></TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {new Date(r.created_at).toLocaleDateString()}
+                  {r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'}
                 </TableCell>
                 <TableCell>
                   <Button size="sm" variant="outline" asChild>

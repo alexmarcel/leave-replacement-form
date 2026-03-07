@@ -8,15 +8,24 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { supabase } from '@/lib/supabase'
 import { formatDate, formatDateShort } from '@/lib/dates'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks, addMonths, subWeeks, subMonths } from 'date-fns'
-import type { LeaveScheduleEntry } from '@/lib/types'
 import { ChevronLeft, ChevronRight } from 'lucide-react-native'
 
 type ViewMode = 'day' | 'week' | 'month'
 
+type ScheduleEntry = {
+  id: string
+  start_date: string
+  end_date: string
+  total_days: number
+  requester: { full_name: string; department: string | null; jawatan: string | null }
+  replacement: { full_name: string } | null
+  leave_type: { name: string; color_hex: string }
+}
+
 export default function ScheduleScreen() {
   const [mode, setMode] = useState<ViewMode>('week')
   const [anchor, setAnchor] = useState(new Date())
-  const [entries, setEntries] = useState<LeaveScheduleEntry[]>([])
+  const [entries, setEntries] = useState<ScheduleEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -40,12 +49,18 @@ export default function ScheduleScreen() {
 
   const loadData = useCallback(async () => {
     const { data } = await supabase
-      .from('leave_schedule')
-      .select('*')
+      .from('leave_requests')
+      .select(`
+        id, start_date, end_date, total_days,
+        requester:profiles!requester_id(full_name, department, jawatan),
+        replacement:profiles!replacement_id(full_name),
+        leave_type:leave_types!leave_type_id(name, color_hex)
+      `)
+      .eq('status', 'approved')
       .lte('start_date', end)
       .gte('end_date', start)
       .order('start_date', { ascending: true })
-    setEntries((data ?? []) as LeaveScheduleEntry[])
+    setEntries((data ?? []) as unknown as ScheduleEntry[])
     setLoading(false)
     setRefreshing(false)
   }, [start, end])
@@ -99,7 +114,7 @@ export default function ScheduleScreen() {
       ) : (
         <FlatList
           data={entries}
-          keyExtractor={e => e.leave_request_id}
+          keyExtractor={e => e.id}
           contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
           ListEmptyComponent={
@@ -108,24 +123,33 @@ export default function ScheduleScreen() {
             </View>
           }
           ItemSeparatorComponent={() => <View className="h-2" />}
-          renderItem={({ item: e }) => (
-            <View className="bg-white rounded-2xl px-4 py-3.5 border border-gray-100 flex-row items-center gap-3">
-              <View className="w-1 self-stretch rounded-full" style={{ backgroundColor: e.color_hex }} />
-              <View className="flex-1">
-                <Text className="font-semibold text-gray-900">{e.full_name}</Text>
-                <Text className="text-gray-500 text-xs">{e.department ?? ''}{e.jawatan ? ` · ${e.jawatan}` : ''}</Text>
+          renderItem={({ item: e }) => {
+            const lt = e.leave_type as any
+            const req = e.requester as any
+            const repl = e.replacement as any
+            const color = lt?.color_hex ?? '#059669'
+            return (
+              <View className="bg-white rounded-2xl px-4 py-3.5 border border-gray-100 flex-row items-center gap-3">
+                <View className="w-1 self-stretch rounded-full" style={{ backgroundColor: color }} />
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">{req?.full_name}</Text>
+                  <Text className="text-gray-500 text-xs">{req?.department ?? ''}{req?.jawatan ? ` · ${req.jawatan}` : ''}</Text>
+                  {repl?.full_name
+                    ? <Text className="text-green-600 text-xs mt-0.5">Replacement: {repl.full_name}</Text>
+                    : null}
+                </View>
+                <View className="items-end">
+                  <Text className="text-xs font-medium" style={{ color }}>{lt?.name}</Text>
+                  <Text className="text-gray-400 text-xs mt-0.5">
+                    {e.start_date === e.end_date
+                      ? formatDateShort(e.start_date)
+                      : `${formatDateShort(e.start_date)} – ${formatDateShort(e.end_date)}`}
+                  </Text>
+                  <Text className="text-gray-400 text-xs">{e.total_days}d</Text>
+                </View>
               </View>
-              <View className="items-end">
-                <Text className="text-xs font-medium" style={{ color: e.color_hex }}>{e.leave_type}</Text>
-                <Text className="text-gray-400 text-xs mt-0.5">
-                  {e.start_date === e.end_date
-                    ? formatDateShort(e.start_date)
-                    : `${formatDateShort(e.start_date)} – ${formatDateShort(e.end_date)}`}
-                </Text>
-                <Text className="text-gray-400 text-xs">{e.total_days}d</Text>
-              </View>
-            </View>
-          )}
+            )
+          }}
         />
       )}
     </SafeAreaView>

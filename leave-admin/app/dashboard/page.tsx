@@ -18,7 +18,17 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).in('role', ['staff', 'approver', 'admin']).eq('is_active', true),
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'approver').eq('is_active', true),
-    supabase.from('staff_on_leave_today').select('*'),
+    supabase
+      .from('leave_requests')
+      .select(`
+        id, start_date, end_date, total_days,
+        requester:profiles!requester_id(full_name, department, jawatan),
+        replacement:profiles!replacement_id(full_name),
+        leave_type:leave_types!leave_type_id(name, color_hex)
+      `)
+      .eq('status', 'approved')
+      .lte('start_date', new Date().toISOString().slice(0, 10))
+      .gte('end_date', new Date().toISOString().slice(0, 10)),
     supabase.from('leave_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending_approval'),
     supabase.from('leave_requests').select('*', { count: 'exact', head: true }).eq('status', 'approved'),
     supabase
@@ -69,18 +79,35 @@ export default async function DashboardPage() {
             {!onLeaveToday?.length ? (
               <p className="text-sm text-muted-foreground">No staff on leave today.</p>
             ) : (
-              <ul className="space-y-2">
-                {onLeaveToday.map(s => (
-                  <li key={s.leave_request_id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-medium">{s.full_name}</p>
-                      <p className="text-muted-foreground text-xs">{s.department ?? '—'}</p>
-                    </div>
-                    <Badge style={{ backgroundColor: s.color_hex }} className="text-white text-xs">
-                      {s.leave_type}
-                    </Badge>
-                  </li>
-                ))}
+              <ul className="divide-y">
+                {(onLeaveToday as any[]).map(s => {
+                  const req = s.requester
+                  const lt = s.leave_type
+                  const repl = s.replacement
+                  return (
+                    <li key={s.id} className="py-3 first:pt-0 last:pb-0">
+                      <Link href={`/dashboard/requests/${s.id}`} className="flex items-start justify-between gap-3 hover:opacity-80">
+                        <Badge style={{ backgroundColor: lt?.color_hex ?? '#888' }} className="text-white text-xs shrink-0 mr-4 mt-0.5">
+                          {lt?.name}
+                        </Badge>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{req?.full_name ?? '—'}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {req?.jawatan ?? ''}{req?.department ? ` · ${req.department}` : ''}
+                          </p>
+                          <p className="text-muted-foreground text-xs mt-0.5">
+                            {s.start_date} to {s.end_date} · {s.total_days} day{s.total_days !== 1 ? 's' : ''}
+                          </p>
+                          {repl?.full_name && (
+                            <p className="text-muted-foreground text-xs mt-0.5">
+                              Replacement: {repl.full_name}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </CardContent>

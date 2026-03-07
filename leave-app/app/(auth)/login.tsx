@@ -26,7 +26,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <View className="flex-1 justify-center px-6 py-12">
+        <View className="flex-1 justify-top px-6 mt-20 py-12">
           {/* Header */}
           <View className="mb-10">
             <View className="w-14 h-14 rounded-2xl bg-emerald-600 items-center justify-center mb-4">

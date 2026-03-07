@@ -62,6 +62,7 @@ export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props)
         body: JSON.stringify({
           id: editing.id,
           full_name: form.full_name,
+          email: form.email,
           phone: form.phone || null,
           jawatan: form.jawatan || null,
           department: form.department || null,
@@ -118,7 +119,7 @@ export function StaffFormDialog({ open, onOpenChange, editing, onSaved }: Props)
             </div>
             <div className="col-span-2 space-y-1.5">
               <Label>Email *</Label>
-              <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} required disabled={!!editing} />
+              <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label>Phone</Label>
