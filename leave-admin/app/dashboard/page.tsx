@@ -2,8 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Users, UserCheck, Clock, CheckCircle, ShieldCheck } from 'lucide-react'
-import { StatusBadge } from '@/components/status-badge'
+import { RecentRequestsCard } from './recent-requests-card'
 import Link from 'next/link'
+
+function fmtDate(d: string) {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  })
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -39,7 +45,7 @@ export default async function DashboardPage() {
         leave_type:leave_types!leave_type_id(name, color_hex)
       `)
       .order('created_at', { ascending: false })
-      .limit(8),
+      .limit(10),
   ])
 
   const stats = [
@@ -96,7 +102,7 @@ export default async function DashboardPage() {
                             {req?.jawatan ?? ''}{req?.department ? ` · ${req.department}` : ''}
                           </p>
                           <p className="text-muted-foreground text-xs mt-0.5">
-                            {s.start_date} to {s.end_date} · {s.total_days} day{s.total_days !== 1 ? 's' : ''}
+                            {fmtDate(s.start_date)} to {fmtDate(s.end_date)} · {s.total_days} day{s.total_days !== 1 ? 's' : ''}
                           </p>
                           {repl?.full_name && (
                             <p className="text-muted-foreground text-xs mt-0.5">
@@ -114,33 +120,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Recent Requests */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Recent Requests</CardTitle>
-            <Link href="/dashboard/requests" className="text-xs text-primary hover:underline">View all</Link>
-          </CardHeader>
-          <CardContent>
-            {!recentRequests?.length ? (
-              <p className="text-sm text-muted-foreground">No requests yet.</p>
-            ) : (
-              <ul className="space-y-3">
-                {recentRequests.map((r: any) => (
-                  <li key={r.id}>
-                    <Link href={`/dashboard/requests/${r.id}`} className="flex items-center justify-between hover:opacity-80">
-                      <div>
-                        <p className="text-sm font-medium">{r.requester?.full_name ?? '—'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {r.leave_type?.name} · {r.start_date} → {r.end_date}
-                        </p>
-                      </div>
-                      <StatusBadge status={r.status} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        <RecentRequestsCard requests={recentRequests ?? []} />
       </div>
     </div>
   )

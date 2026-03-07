@@ -165,6 +165,61 @@ export default function RequestDetailScreen() {
     loadRequest()
   }
 
+  async function handleWithdraw() {
+    Alert.alert(
+      'Withdraw Agreement',
+      'Are you sure you want to withdraw? Staff A will need to pick a new replacement.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Withdraw', style: 'destructive', onPress: async () => {
+            setActionLoading('withdraw')
+            const { error } = await supabase
+              .from('leave_requests')
+              .update({
+                replacement_response: 'rejected',
+                replacement_responded_at: new Date().toISOString(),
+                replacement_notes: null,
+                status: 'replacement_rejected',
+              })
+              .eq('id', id)
+
+            if (error) { Alert.alert('Error', error.message); setActionLoading(null); return }
+
+            // Notify Staff A
+            if (request?.requester?.expo_push_token) {
+              const body = `${profile?.full_name} withdrew as your replacement. Please pick someone else.`
+              await sendPushNotification(request.requester.expo_push_token, 'Replacement Withdrew', body)
+              await supabase.from('notifications').insert({
+                recipient_id: request.requester_id,
+                leave_request_id: id,
+                type: 'replacement_rejected',
+                title: 'Replacement Withdrew',
+                body,
+              })
+            }
+
+            // Notify Staff C
+            if (request?.approver?.expo_push_token) {
+              const body = `The replacement for ${request.requester?.full_name}'s leave request has withdrawn. The request is on hold.`
+              await sendPushNotification(request.approver.expo_push_token, 'Replacement Withdrew', body)
+              await supabase.from('notifications').insert({
+                recipient_id: request.approver_id,
+                leave_request_id: id,
+                type: 'replacement_rejected',
+                title: 'Replacement Withdrew',
+                body,
+              })
+            }
+
+            setActionLoading(null)
+            loadRequest()
+          },
+        },
+      ]
+    )
+  }
+
   async function handleCancel() {
     Alert.alert('Cancel Request', 'Are you sure you want to cancel this leave request?', [
       { text: 'No', style: 'cancel' },
@@ -347,6 +402,19 @@ export default function RequestDetailScreen() {
               </View>
             )}
 
+            {/* Staff B — withdraw after agreeing */}
+            {isReplacement && request.status === 'pending_approval' && (
+              <TouchableOpacity
+                className="border border-red-300 rounded-xl py-3 items-center mb-2"
+                onPress={handleWithdraw}
+                disabled={!!actionLoading}
+              >
+                {actionLoading === 'withdraw'
+                  ? <ActivityIndicator color="#dc2626" />
+                  : <Text className="text-red-600 font-medium">Withdraw Agreement</Text>}
+              </TouchableOpacity>
+            )}
+
             {/* Staff A — pick new replacement after rejection */}
             {isRequester && request.status === 'replacement_rejected' && (
               <TouchableOpacity
@@ -428,15 +496,16 @@ function PartyCard({ label, profile, extra, statusIcon }: { label: string; profi
           {profile ? (
             <>
               <Text className="text-gray-900 font-semibold">{profile.full_name}</Text>
-              {profile.jawatan ? <Text className="text-gray-500 text-xs">{profile.jawatan}</Text> : null}
-              {profile.department ? <Text className="text-gray-400 text-xs">{profile.department}</Text> : null}
-              {extra ? <Text className="text-gray-500 text-xs mt-1">{extra}</Text> : null}
+              <Text>
+                {profile.jawatan ? <Text className="text-gray-500 text-xs">{profile.jawatan}</Text> : null} 
+              </Text>
+              {extra ? <Text className="text-green-700 text-xs mt-1">{extra}</Text> : null}
             </>
           ) : (
             <Text className="text-gray-400 text-sm">Not assigned</Text>
           )}
         </View>
-        {statusIcon && <View className="justify-center">{statusIcon}</View>}
+        {statusIcon && <View className="mt-2 mb-6 justify-center">{statusIcon}</View>}
       </View>
     </View>
   )

@@ -8,7 +8,7 @@ import type { LeaveStatus } from '@/lib/types'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
-const FINAL_STATUSES: LeaveStatus[] = ['approved', 'rejected', 'cancelled']
+const FINAL_STATUSES: LeaveStatus[] = ['rejected', 'cancelled']
 
 export default async function RequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

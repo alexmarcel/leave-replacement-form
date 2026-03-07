@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native'
 import { supabase } from '@/lib/supabase'
+import { Tent, TentTree, Trees } from 'lucide-react-native'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -29,8 +30,10 @@ export default function LoginScreen() {
         <View className="flex-1 justify-top px-6 mt-20 py-12">
           {/* Header */}
           <View className="mb-10">
-            <View className="w-14 h-14 rounded-2xl bg-emerald-600 items-center justify-center mb-4">
-              <Text className="text-white text-2xl font-bold">L</Text>
+            <View className="flex-row items-end gap-1 mb-4">
+              <View className="w-14 h-14 rounded-2xl bg-emerald-600 items-center justify-center">
+                <TentTree size={28} color="white" />
+              </View>
             </View>
             <Text className="text-3xl font-bold text-gray-900">Welcome back</Text>
             <Text className="text-gray-500 mt-1">Sign in to your account</Text>

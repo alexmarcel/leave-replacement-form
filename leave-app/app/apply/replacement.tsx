@@ -130,7 +130,7 @@ export default function ApplyStep2Replacement() {
             </View>
           }
           renderSectionHeader={({ section }) => (
-            <View className="mt-4 mb-2 first:mt-0">
+            <View className="mt-4 mb-2 first:mt-5">
               <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 {section.title}
               </Text>

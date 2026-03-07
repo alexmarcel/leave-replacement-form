@@ -63,7 +63,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="requests"
-        options={{ title: 'Requests', tabBarIcon: ({ color }) => <FileText size={22} color={color} /> }}
+        options={{ title: 'My Requests', tabBarIcon: ({ color }) => <FileText size={22} color={color} /> }}
       />
       <Tabs.Screen
         name="schedule"

@@ -549,6 +549,7 @@ DO $$ BEGIN
   DROP POLICY IF EXISTS "notifications: admin read all" ON public.notifications;
   -- audit log
   DROP POLICY IF EXISTS "audit: requester read own" ON public.leave_audit_log;
+  DROP POLICY IF EXISTS "audit: parties read own"   ON public.leave_audit_log;
   DROP POLICY IF EXISTS "audit: admin read all"     ON public.leave_audit_log;
 END $$;
 
@@ -676,13 +677,17 @@ CREATE POLICY "notifications: admin read all"
 
 
 -- ── leave_audit_log policies ──────────────────────────────────
-CREATE POLICY "audit: requester read own"
+CREATE POLICY "audit: parties read own"
   ON public.leave_audit_log FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM public.leave_requests lr
-      WHERE lr.id           = leave_request_id
-        AND lr.requester_id = auth.uid()
+      WHERE lr.id = leave_request_id
+        AND (
+          lr.requester_id   = auth.uid() OR
+          lr.replacement_id = auth.uid() OR
+          lr.approver_id    = auth.uid()
+        )
     )
   );
 
