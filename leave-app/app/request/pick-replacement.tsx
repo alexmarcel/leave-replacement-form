@@ -17,6 +17,7 @@ interface Candidate {
   department: string | null
   jawatan: string | null
   email: string
+  available: boolean
 }
 
 interface Section {
@@ -37,7 +38,10 @@ function groupByDepartment(candidates: Candidate[]): Section[] {
       if (b === 'No Department') return -1
       return a.localeCompare(b)
     })
-    .map(([title, data]) => ({ title, data }))
+    .map(([title, data]) => ({
+      title,
+      data: [...data.filter(c => c.available), ...data.filter(c => !c.available)],
+    }))
 }
 
 export default function PickReplacementScreen() {
@@ -68,14 +72,26 @@ export default function PickReplacementScreen() {
 
       setRequest(req)
 
-      const { data, error: rpcError } = await supabase.rpc('get_available_replacements', {
-        p_start_date: req.start_date,
-        p_end_date: req.end_date,
-        p_requester_id: req.requester_id,
-      })
+      const [{ data: availableData, error: rpcError }, { data: allStaff }] = await Promise.all([
+        supabase.rpc('get_available_replacements', {
+          p_start_date: req.start_date,
+          p_end_date: req.end_date,
+          p_requester_id: req.requester_id,
+        }),
+        supabase
+          .from('profiles')
+          .select('id, full_name, department, jawatan, email')
+          .eq('is_active', true)
+          .in('role', ['staff', 'approver', 'admin'])
+          .neq('id', req.requester_id)
+          .order('full_name'),
+      ])
 
-      if (rpcError) setError(rpcError.message)
-      setCandidates((data ?? []) as Candidate[])
+      if (rpcError) { setError(rpcError.message); setLoading(false); return }
+      const availableIds = new Set((availableData ?? []).map((c: any) => c.id))
+      setCandidates(
+        (allStaff ?? []).map(p => ({ ...p, available: availableIds.has(p.id) }))
+      )
       setLoading(false)
     }
     load()
@@ -186,12 +202,8 @@ export default function PickReplacementScreen() {
           stickySectionHeadersEnabled={false}
           ListEmptyComponent={
             <View className="items-center py-16">
-              <Text className="text-gray-400 text-sm">No available replacements found.</Text>
-              <Text className="text-gray-400 text-xs mt-1">
-                {candidates.length === 0
-                  ? 'No eligible staff available.'
-                  : 'All eligible staff may already be on leave during this period.'}
-              </Text>
+              <Text className="text-gray-400 text-sm">No staff found.</Text>
+              <Text className="text-gray-400 text-xs mt-1">No staff accounts exist yet. Ask an admin to create staff accounts.</Text>
             </View>
           }
           renderSectionHeader={({ section }) => (
@@ -202,20 +214,33 @@ export default function PickReplacementScreen() {
             </View>
           )}
           ItemSeparatorComponent={() => <View className="h-2" />}
-          renderItem={({ item: c }) => (
-            <TouchableOpacity
-              className="bg-white rounded-2xl px-4 py-4 border border-gray-100 flex-row items-center"
-              onPress={() => handleSelect(c)}
-              disabled={submitting}
-            >
-              <View className="flex-1">
-                <Text className="font-semibold text-gray-900">{c.full_name}</Text>
-                {c.jawatan ? <Text className="text-gray-500 text-sm">{c.jawatan}</Text> : null}
-                {c.department ? <Text className="text-gray-400 text-xs">{c.department}</Text> : null}
-              </View>
-              {submitting && <ActivityIndicator color="#059669" />}
-            </TouchableOpacity>
-          )}
+          renderItem={({ item: c }) => {
+            if (!c.available) {
+              return (
+                <View className="bg-gray-50 rounded-2xl px-4 py-4 border border-gray-100 flex-row items-center opacity-60">
+                  <View className="flex-1">
+                    <Text className="font-semibold text-gray-400">{c.full_name}</Text>
+                    {c.jawatan ? <Text className="text-gray-400 text-sm">{c.jawatan}</Text> : null}
+                    <Text className="text-xs text-orange-400 mt-1">Already replacing someone else</Text>
+                  </View>
+                </View>
+              )
+            }
+            return (
+              <TouchableOpacity
+                className="bg-white rounded-2xl px-4 py-4 border border-gray-100 flex-row items-center"
+                onPress={() => handleSelect(c)}
+                disabled={submitting}
+              >
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">{c.full_name}</Text>
+                  {c.jawatan ? <Text className="text-gray-500 text-sm">{c.jawatan}</Text> : null}
+                  {c.department ? <Text className="text-gray-400 text-xs">{c.department}</Text> : null}
+                </View>
+                {submitting && <ActivityIndicator color="#059669" />}
+              </TouchableOpacity>
+            )
+          }}
         />
       )}
     </SafeAreaView>

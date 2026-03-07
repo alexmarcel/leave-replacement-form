@@ -95,6 +95,9 @@ export default function LoginScreen() {
               <Text className="text-sm text-gray-200 mb-1 text-left">
                 Sistem Automasi Mohon Staf Izin Ambil Holiday (SAMSIAH)
               </Text>
+              <Text className="text-sm text-gray-200 mb-1 text-left">
+                v1.0.0-beta.1
+              </Text>
               <Text className="text-sm text-gray-200 text-left">
                 © 2026 ILKKM Tawau
               </Text>

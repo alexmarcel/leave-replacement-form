@@ -383,13 +383,14 @@ BEGIN
         AND lr.end_date    >= p_start_date
     )
 
-    -- In One-to-One mode, exclude anyone already assigned as a replacement
+    -- In One-to-One mode, exclude anyone who has AGREED to cover another request.
+    -- pending_replacement means they haven't responded yet, so they are still selectable.
     AND (
       v_allow_multiple = TRUE
       OR NOT EXISTS (
         SELECT 1 FROM public.leave_requests lr
         WHERE lr.replacement_id = p.id
-          AND lr.status IN ('pending_replacement', 'pending_approval', 'approved')
+          AND lr.status IN ('pending_approval', 'approved')
           AND lr.start_date    <= p_end_date
           AND lr.end_date      >= p_start_date
       )

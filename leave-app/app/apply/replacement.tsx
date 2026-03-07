@@ -70,7 +70,7 @@ export default function ApplyStep2Replacement() {
           .from('profiles')
           .select('id, full_name, department, jawatan, email')
           .eq('is_active', true)
-          .in('role', ['staff', 'approver'])
+          .in('role', ['staff', 'approver', 'admin'])
           .neq('id', profile!.id)
           .order('full_name'),
       ])

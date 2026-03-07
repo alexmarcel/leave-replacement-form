@@ -10,6 +10,7 @@ import { useAuth } from '@/context/auth'
 import { formatDateShort } from '@/lib/dates'
 import { format, addDays } from 'date-fns'
 import type { LeaveRequest } from '@/lib/types'
+import { Calendar, ChevronRight } from 'lucide-react-native'
 
 type LeaveChipEntry = {
   id: string
@@ -207,13 +208,14 @@ function greeting() {
   const h = new Date().getHours()
   if (h < 12) return 'morning'
   if (h < 17) return 'afternoon'
-  return 'evening'
+  if (h < 19) return 'evening'
+  return 'night'
 }
 
 function Section({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
   return (
     <View className="mt-5 mx-5">
-      <View className="flex-row items-center gap-2 mb-3">
+      <View className="flex-row items-center gap-2 mb-3"><Calendar size={18} color="#d1d5db" className="ml-2" />
         <View className={`w-2 h-2 rounded-full ${accent}`} />
         <Text className="text-sm font-semibold text-gray-700">{title}</Text>
       </View>
